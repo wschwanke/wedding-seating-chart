@@ -1,6 +1,6 @@
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, pointerWithin } from "@dnd-kit/core"
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core"
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Header } from "@/components/layout/Header"
 import { GuestSidebar } from "@/components/sidebar/GuestSidebar"
 import { TableGrid } from "@/components/tables/TableGrid"
@@ -12,10 +12,34 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Card } from "@/components/ui/card"
 import { Users } from "lucide-react"
 
+interface ChairDragOverlayProps {
+	guest: Guest
+	color: string
+}
+
+function ChairDragOverlay({ guest, color }: ChairDragOverlayProps) {
+	return (
+		<div
+			className="w-16 h-16 rounded-full border-2 flex items-center justify-center text-xs font-medium shadow-lg"
+			style={{
+				backgroundColor: color ? `${color}20` : '#f5f5f5',
+				borderColor: color || '#888',
+			}}
+		>
+			<div className="text-center">
+				<div className="text-sm font-bold">
+					{guest.firstName.charAt(0).toUpperCase()}{guest.lastName.charAt(0).toUpperCase()}
+				</div>
+			</div>
+		</div>
+	)
+}
+
 function App() {
 	const [view, setView] = useState<"main" | "settings">("main")
 	const [activeGuest, setActiveGuest] = useState<Guest | null>(null)
 	const [activeParty, setActiveParty] = useState<{ subgroup: Subgroup; guests: Guest[] } | null>(null)
+	const [dragSource, setDragSource] = useState<'chair' | 'sidebar' | null>(null)
 	const assignToSeat = useSeatingStore((state) => state.assignToSeat)
 	const tables = useSeatingStore((state) => state.tables)
 	const relationships = useSeatingStore((state) => state.relationships)
@@ -32,6 +56,11 @@ function App() {
 
 	const handleDragStart = (event: DragStartEvent): void => {
 		const activeData = event.active.data.current
+		const activeId = String(event.active.id)
+		
+		// Determine drag source
+		const isFromChair = activeId.startsWith('chair-')
+		setDragSource(isFromChair ? 'chair' : 'sidebar')
 		
 		if (activeData?.type === 'party') {
 			setActiveParty({ 
@@ -53,6 +82,7 @@ function App() {
 
 		setActiveGuest(null)
 		setActiveParty(null)
+		setDragSource(null)
 
 		if (!over) return
 
@@ -110,9 +140,9 @@ function App() {
 		assignToSeat(guest.id, dropData.tableId, dropData.seatIndex)
 	}
 
-	const getGuestColor = (guest: Guest): string => {
+	const getGuestColor = useCallback((guest: Guest): string => {
 		return relationships.find((r) => r.id === guest.relationshipId)?.color || "#888"
-	}
+	}, [relationships])
 
 	// Show settings page if in settings view
 	if (view === "settings") {
@@ -128,7 +158,7 @@ function App() {
 		<TooltipProvider>
 			<DndContext 
 				sensors={sensors} 
-				collisionDetection={pointerWithin}
+				collisionDetection={closestCenter}
 				onDragStart={handleDragStart} 
 				onDragEnd={handleDragEnd}
 			>
@@ -141,7 +171,9 @@ function App() {
 				</div>
 
 				<DragOverlay>
-					{activeGuest ? (
+					{activeGuest && dragSource === 'chair' ? (
+						<ChairDragOverlay guest={activeGuest} color={getGuestColor(activeGuest)} />
+					) : activeGuest ? (
 						<GuestCard guest={activeGuest} color={getGuestColor(activeGuest)} />
 					) : activeParty ? (
 						<Card className="p-3 border-l-4" style={{ borderLeftColor: getGuestColor(activeParty.guests[0]) }}>

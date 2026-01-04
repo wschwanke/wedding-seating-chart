@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo, useCallback, memo } from "react"
 import { Card } from "@/components/ui/card"
 import { Chair } from "./Chair"
 import { GuestForm } from "@/components/guests/GuestForm"
@@ -15,7 +15,7 @@ interface CircularTableProps {
 	table: Table
 }
 
-export function CircularTable({ table }: CircularTableProps) {
+export const CircularTable = memo(function CircularTable({ table }: CircularTableProps) {
 	const guests = useSeatingStore((state) => state.guests)
 	const relationships = useSeatingStore((state) => state.relationships)
 	const updateTableName = useSeatingStore((state) => state.updateTableName)
@@ -31,43 +31,47 @@ export function CircularTable({ table }: CircularTableProps) {
 	const [guestFormOpen, setGuestFormOpen] = useState(false)
 	const [editingGuest, setEditingGuest] = useState<Guest | undefined>()
 
-	const handleEditGuest = (guest: Guest): void => {
+	const handleEditGuest = useCallback((guest: Guest): void => {
 		setEditingGuest(guest)
 		setGuestFormOpen(true)
-	}
+	}, [])
 
-	const handleSaveSettings = (): void => {
+	const handleSaveSettings = useCallback((): void => {
 		if (tableName !== table.name) {
 			updateTableName(table.id, tableName)
 		}
 		if (chairCount !== table.chairCount) {
 			updateTableChairCount(table.id, chairCount)
 		}
-	}
+	}, [tableName, table.name, table.id, chairCount, table.chairCount, updateTableName, updateTableChairCount])
 
-	const preventDrag = (e: React.PointerEvent): void => {
+	const preventDrag = useCallback((e: React.PointerEvent): void => {
 		e.stopPropagation()
-	}
+	}, [])
 
-	const getGuestColor = (guestId: string | null): string | undefined => {
+	// Memoize guest color lookup to prevent recalculation on every render
+	const getGuestColor = useCallback((guestId: string | null): string | undefined => {
 		if (!guestId) return undefined
 		const guest = guests.find((g) => g.id === guestId)
 		if (!guest) return undefined
 		return relationships.find((r) => r.id === guest.relationshipId)?.color
-	}
+	}, [guests, relationships])
 
-	// Calculate chair positions in a circle
+	// Calculate chair positions in a circle - memoize to prevent recalculation
 	const radius = 100 // pixels from center
 	const centerX = 150
 	const centerY = 150
 
-	const chairPositions = Array.from({ length: table.chairCount }, (_, i) => {
-		const angle = (i / table.chairCount) * 2 * Math.PI - Math.PI / 2
-		return {
-			x: centerX + radius * Math.cos(angle),
-			y: centerY + radius * Math.sin(angle),
-		}
-	})
+	const chairPositions = useMemo(() => 
+		Array.from({ length: table.chairCount }, (_, i) => {
+			const angle = (i / table.chairCount) * 2 * Math.PI - Math.PI / 2
+			return {
+				x: centerX + radius * Math.cos(angle),
+				y: centerY + radius * Math.sin(angle),
+			}
+		}),
+		[table.chairCount]
+	)
 
 	const assignedCount = table.seats.filter((s) => s !== null).length
 	const isOverCapacity = isTableOverCapacity(table.id)
@@ -198,6 +202,6 @@ export function CircularTable({ table }: CircularTableProps) {
 			onOpenChange={setGuestFormOpen}
 			guest={editingGuest}
 		/>
-		</>
+	</>
 	)
-}
+})

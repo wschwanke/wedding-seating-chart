@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo, memo } from "react"
 import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
@@ -17,7 +17,7 @@ interface ChairProps {
 	onEdit?: () => void
 }
 
-export function Chair({
+export const Chair = memo(function Chair({
 	tableId,
 	seatIndex,
 	guest,
@@ -29,7 +29,11 @@ export function Chair({
 	const unassignGuest = useSeatingStore((state) => state.unassignGuest)
 	const relationships = useSeatingStore((state) => state.relationships)
 	
-	const relationship = guest ? relationships.find((r) => r.id === guest.relationshipId) : null
+	// Memoize relationship lookup to prevent unnecessary recalculations
+	const relationship = useMemo(() => 
+		guest ? relationships.find((r) => r.id === guest.relationshipId) : null,
+		[guest, relationships]
+	)
 
 	const { isOver, setNodeRef: setDropRef } = useDroppable({
 		id: `${tableId}-${seatIndex}`,
@@ -91,7 +95,7 @@ export function Chair({
 				transform: "translate(-50%, -50%)",
 			}}
 		>
-			<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+			<Popover open={popoverOpen && !isDragging} onOpenChange={setPopoverOpen}>
 				<PopoverTrigger asChild>
 					<div
 						ref={setDragRef}
@@ -108,7 +112,7 @@ export function Chair({
 							"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
 							"bg-background border-primary shadow-md cursor-pointer hover:scale-105",
 							isOver && "ring-2 ring-primary ring-offset-2 scale-110",
-							isDragging && "opacity-50",
+							isDragging && "opacity-30",
 						)}
 						style={{
 							backgroundColor: color ? `${color}20` : undefined,
@@ -166,4 +170,4 @@ export function Chair({
 			</Popover>
 		</div>
 	)
-}
+})

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo, useCallback, memo } from "react"
 import { Plus, Users, AlertCircle, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -26,7 +26,7 @@ interface PartyHeaderProps {
 	assignments?: Array<{ guest: Guest; assignment: GuestAssignment }>
 }
 
-function PartyHeader({ 
+const PartyHeader = memo(function PartyHeader({ 
 	subgroup, 
 	guests, 
 	relationshipColor, 
@@ -101,7 +101,7 @@ function PartyHeader({
 			)}
 		</div>
 	)
-}
+})
 
 export function GuestSidebar() {
 	const [guestFormOpen, setGuestFormOpen] = useState(false)
@@ -118,13 +118,27 @@ export function GuestSidebar() {
 	const getAssignedGuests = useSeatingStore((state) => state.getAssignedGuests)
 	const autoAssign = useSeatingStore((state) => state.autoAssign)
 
-	// Force reactivity - re-compute when tables change
-	const unassignedGuests = tables && getUnassignedGuests()
-	const assignedGuestsData = tables && getAssignedGuests()
+	// Memoize expensive guest computations - only recalculate when data changes
+	const unassignedGuests = useMemo(() => 
+		tables && getUnassignedGuests(),
+		[tables, getUnassignedGuests]
+	)
+	
+	const assignedGuestsData = useMemo(() => 
+		tables && getAssignedGuests(),
+		[tables, getAssignedGuests]
+	)
 
 	// Get unique relationships from guests (needed for initial expansion state)
-	const uniqueRelationshipIds = Array.from(new Set(guests.map((g) => g.relationshipId)))
-	const uniqueRelationships = relationships.filter((r) => uniqueRelationshipIds.includes(r.id))
+	const uniqueRelationshipIds = useMemo(() => 
+		Array.from(new Set(guests.map((g) => g.relationshipId))),
+		[guests]
+	)
+	
+	const uniqueRelationships = useMemo(() => 
+		relationships.filter((r) => uniqueRelationshipIds.includes(r.id)),
+		[relationships, uniqueRelationshipIds]
+	)
 
 	// Track expanded state for relationships and subgroups/parties
 	// Separate states for unassigned (expanded by default) and assigned (collapsed by default)
@@ -135,7 +149,7 @@ export function GuestSidebar() {
 	const [expandedAssignedRelationships, setExpandedAssignedRelationships] = useState<Set<string>>(new Set())
 	const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(new Set())
 
-	const toggleUnassignedRelationship = (relationship: string): void => {
+	const toggleUnassignedRelationship = useCallback((relationship: string): void => {
 		setExpandedUnassignedRelationships((prev) => {
 			const next = new Set(prev)
 			if (next.has(relationship)) {
@@ -145,9 +159,9 @@ export function GuestSidebar() {
 			}
 			return next
 		})
-	}
+	}, [])
 
-	const toggleAssignedRelationship = (relationship: string): void => {
+	const toggleAssignedRelationship = useCallback((relationship: string): void => {
 		setExpandedAssignedRelationships((prev) => {
 			const next = new Set(prev)
 			if (next.has(relationship)) {
@@ -157,9 +171,9 @@ export function GuestSidebar() {
 			}
 			return next
 		})
-	}
+	}, [])
 
-	const toggleSubgroup = (subgroupId: string): void => {
+	const toggleSubgroup = useCallback((subgroupId: string): void => {
 		setExpandedSubgroups((prev) => {
 			const next = new Set(prev)
 			if (next.has(subgroupId)) {
@@ -169,20 +183,21 @@ export function GuestSidebar() {
 			}
 			return next
 		})
-	}
+	}, [])
 
-	const handleEditGuest = (guest: Guest): void => {
+	const handleEditGuest = useCallback((guest: Guest): void => {
 		setEditingGuest(guest)
 		setGuestFormOpen(true)
-	}
+	}, [])
 
-	const handleAddGuest = (): void => {
+	const handleAddGuest = useCallback((): void => {
 		setEditingGuest(undefined)
 		setGuestFormOpen(true)
-	}
+	}, [])
 
 	// Helper to organize guests by relationship -> party -> guests hierarchy
-	const organizeGuestsByRelationship = (guestList: Guest[]) => {
+	// Memoized to prevent recalculation on every render
+	const organizeGuestsByRelationship = useCallback((guestList: Guest[]) => {
 		const relationshipMap = new Map<string, {
 			parties: Map<string, { subgroup: Subgroup; guests: Guest[] }>,
 			soloGuests: Guest[]
@@ -218,12 +233,16 @@ export function GuestSidebar() {
 		})
 
 		return relationshipMap
-	}
+	}, [subgroups])
 
-	const unassignedByRelationship = organizeGuestsByRelationship(unassignedGuests)
+	const unassignedByRelationship = useMemo(() => 
+		organizeGuestsByRelationship(unassignedGuests),
+		[unassignedGuests, organizeGuestsByRelationship]
+	)
 	
 	// For assigned guests, we need to include assignment data
-	const organizeAssignedByRelationship = () => {
+	// Memoized to prevent recalculation on every render
+	const organizeAssignedByRelationship = useCallback(() => {
 		const relationshipMap = new Map<string, {
 			parties: Map<string, { subgroup: Subgroup; guestsData: Array<{ guest: Guest; assignment: GuestAssignment }> }>,
 			soloGuestsData: Array<{ guest: Guest; assignment: GuestAssignment }>
@@ -255,9 +274,12 @@ export function GuestSidebar() {
 		})
 
 		return relationshipMap
-	}
+	}, [assignedGuestsData, subgroups])
 
-	const assignedByRelationship = organizeAssignedByRelationship()
+	const assignedByRelationship = useMemo(() => 
+		organizeAssignedByRelationship(),
+		[organizeAssignedByRelationship]
+	)
 
 	return (
 		<div className="w-96 border-r bg-muted/20 flex flex-col h-full">

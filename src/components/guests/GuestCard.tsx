@@ -1,3 +1,4 @@
+import { useMemo, useCallback, memo } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { Card } from "@/components/ui/card"
@@ -14,11 +15,15 @@ interface GuestCardProps {
 	assignment?: GuestAssignment
 }
 
-export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) {
+export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) {
 	const deleteGuest = useSeatingStore((state) => state.deleteGuest)
 	const relationships = useSeatingStore((state) => state.relationships)
 
-	const relationship = relationships.find((r) => r.id === guest.relationshipId)
+	// Memoize relationship lookup
+	const relationship = useMemo(() => 
+		relationships.find((r) => r.id === guest.relationshipId),
+		[relationships, guest.relationshipId]
+	)
 
 	const { attributes, listeners, setNodeRef, transform, isDragging } =
 		useDraggable({
@@ -26,13 +31,14 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 			data: { guest },
 		})
 
-	const style = {
+	// Memoize style object
+	const style = useMemo(() => ({
 		// Don't apply transform when dragging - let DragOverlay handle it
 		transform: isDragging ? undefined : CSS.Translate.toString(transform),
 		borderLeftColor: color || "#888",
-	}
+	}), [isDragging, transform, color])
 
-	const handleDelete = (e: React.MouseEvent): void => {
+	const handleDelete = useCallback((e: React.MouseEvent): void => {
 		e.stopPropagation()
 		if (
 			window.confirm(
@@ -41,16 +47,16 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 		) {
 			deleteGuest(guest.id)
 		}
-	}
+	}, [guest.firstName, guest.lastName, guest.id, deleteGuest])
 
-	const handleEdit = (e: React.MouseEvent): void => {
+	const handleEdit = useCallback((e: React.MouseEvent): void => {
 		e.stopPropagation()
 		onEdit?.()
-	}
+	}, [onEdit])
 
-	const preventDrag = (e: React.PointerEvent): void => {
+	const preventDrag = useCallback((e: React.PointerEvent): void => {
 		e.stopPropagation()
-	}
+	}, [])
 
 	return (
 		<Card
@@ -120,4 +126,4 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 			</div>
 		</Card>
 	)
-}
+})
