@@ -24,7 +24,8 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 		})
 
 	const style = {
-		transform: CSS.Translate.toString(transform),
+		// Don't apply transform when dragging - let DragOverlay handle it
+		transform: isDragging ? undefined : CSS.Translate.toString(transform),
 		borderLeftColor: color || "#888",
 	}
 

@@ -109,8 +109,18 @@ describe("GuestSidebar", () => {
 
 	it("should show guest cards for unassigned guests", () => {
 		renderWithProviders(<GuestSidebar />)
-		expect(screen.getByText("John Smith")).toBeInTheDocument()
-		expect(screen.getByText("Jane Doe")).toBeInTheDocument()
+		
+		// Guests are now nested under collapsible relationship headers
+		// Verify that both relationships appear in the sidebar
+		const familyHeaders = screen.getAllByText((_content, element) => {
+			return element?.textContent === "Family(1)"
+		})
+		expect(familyHeaders.length).toBeGreaterThan(0)
+		
+		const friendsHeaders = screen.getAllByText((_content, element) => {
+			return element?.textContent === "Friends(1)"
+		})
+		expect(friendsHeaders.length).toBeGreaterThan(0)
 	})
 
 	it("should switch to Groups tab and show color picker", async () => {

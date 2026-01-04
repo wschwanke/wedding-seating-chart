@@ -6,12 +6,16 @@ import { GuestSidebar } from "@/components/sidebar/GuestSidebar"
 import { TableGrid } from "@/components/tables/TableGrid"
 import { GuestCard } from "@/components/guests/GuestCard"
 import { useSeatingStore } from "@/stores/useSeatingStore"
-import type { Guest } from "@/types"
+import type { Guest, Subgroup } from "@/types"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Card } from "@/components/ui/card"
+import { Users } from "lucide-react"
 
 function App() {
 	const [activeGuest, setActiveGuest] = useState<Guest | null>(null)
+	const [activeParty, setActiveParty] = useState<{ subgroup: Subgroup; guests: Guest[] } | null>(null)
 	const assignToSeat = useSeatingStore((state) => state.assignToSeat)
+	const tables = useSeatingStore((state) => state.tables)
 	const relationshipColors = useSeatingStore((state) => state.settings.relationshipColors)
 
 	// Configure drag activation - requires 150ms hold before dragging starts
@@ -26,9 +30,20 @@ function App() {
 	)
 
 	const handleDragStart = (event: DragStartEvent): void => {
-		const guest = event.active.data.current?.guest as Guest | undefined
-		if (guest) {
-			setActiveGuest(guest)
+		const activeData = event.active.data.current
+		
+		if (activeData?.type === 'party') {
+			setActiveParty({ 
+				subgroup: activeData.subgroup as Subgroup, 
+				guests: activeData.guests as Guest[] 
+			})
+			setActiveGuest(null)
+		} else {
+			const guest = activeData?.guest as Guest | undefined
+			if (guest) {
+				setActiveGuest(guest)
+				setActiveParty(null)
+			}
 		}
 	}
 
@@ -36,18 +51,62 @@ function App() {
 		const { active, over } = event
 
 		setActiveGuest(null)
+		setActiveParty(null)
 
 		if (!over) return
 
-		// Extract guest from drag data (works for both sidebar and chair drags)
-		const guest = active.data.current?.guest as Guest | undefined
-		if (!guest) return
-
+		const activeData = active.data.current
 		const dropData = over.data.current as { tableId: string; seatIndex: number } | undefined
 
-		if (dropData) {
-			assignToSeat(guest.id, dropData.tableId, dropData.seatIndex)
+		if (!dropData) return
+
+		// Handle party drag
+		if (activeData?.type === 'party') {
+			const { guests } = activeData as { guests: Guest[] }
+			const { tableId, seatIndex } = dropData
+
+			// Find the table
+			const table = tables.find(t => t.id === tableId)
+			if (!table) return
+
+			// Check if drop seat is empty
+			if (table.seats[seatIndex] !== null) {
+				// Cannot drop on occupied seat
+				return
+			}
+
+			// Try to assign party members consecutively from drop seat
+			let currentSeat = seatIndex
+			for (const guest of guests) {
+				// Find next available seat from currentSeat onward
+				while (currentSeat < table.seats.length && table.seats[currentSeat] !== null) {
+					currentSeat++
+				}
+
+				if (currentSeat < table.seats.length) {
+					assignToSeat(guest.id, tableId, currentSeat)
+					currentSeat++
+				} else {
+					// No more seats, leave remaining guests unassigned
+					break
+				}
+			}
+
+			return
 		}
+
+		// Handle single guest drag (existing logic)
+		const guest = activeData?.guest as Guest | undefined
+		if (!guest) return
+
+		// Check if drop seat is empty
+		const table = tables.find(t => t.id === dropData.tableId)
+		if (table && table.seats[dropData.seatIndex] !== null) {
+			// Cannot drop on occupied seat
+			return
+		}
+
+		assignToSeat(guest.id, dropData.tableId, dropData.seatIndex)
 	}
 
 	const getGuestColor = (guest: Guest): string => {
@@ -70,11 +129,19 @@ function App() {
 					</div>
 				</div>
 
-				<DragOverlay>
-					{activeGuest ? (
-						<GuestCard guest={activeGuest} color={getGuestColor(activeGuest)} />
-					) : null}
-				</DragOverlay>
+			<DragOverlay>
+				{activeGuest ? (
+					<GuestCard guest={activeGuest} color={getGuestColor(activeGuest)} />
+				) : activeParty ? (
+					<Card className="p-3 border-l-4" style={{ borderLeftColor: getGuestColor(activeParty.guests[0]) }}>
+						<div className="flex items-center gap-2">
+							<Users className="h-4 w-4" />
+							<span className="font-medium">{activeParty.subgroup.name}</span>
+							<span className="text-muted-foreground">({activeParty.guests.length})</span>
+						</div>
+					</Card>
+				) : null}
+			</DragOverlay>
 			</DndContext>
 		</TooltipProvider>
 	)

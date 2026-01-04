@@ -12,7 +12,96 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { ChevronDown, ChevronRight } from "lucide-react"
-import type { Guest } from "@/types"
+import { useDraggable } from "@dnd-kit/core"
+import type { Guest, Subgroup, GuestAssignment } from "@/types"
+import { cn } from "@/lib/utils"
+
+interface PartyHeaderProps {
+	subgroup: Subgroup
+	guests: Guest[]
+	relationshipColor: string
+	isExpanded: boolean
+	onToggle: () => void
+	onEditGuest: (guest: Guest) => void
+	assignments?: Array<{ guest: Guest; assignment: GuestAssignment }>
+}
+
+function PartyHeader({ 
+	subgroup, 
+	guests, 
+	relationshipColor, 
+	isExpanded, 
+	onToggle, 
+	onEditGuest,
+	assignments 
+}: PartyHeaderProps) {
+	const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+		id: `party-${subgroup.id}`,
+		data: {
+			type: 'party',
+			subgroup,
+			guests
+		}
+	})
+
+	return (
+		<div className="space-y-2">
+			<div
+				ref={setNodeRef}
+				{...attributes}
+				{...listeners}
+				className={cn(
+					"flex items-center gap-2 w-full text-left text-sm font-medium transition-colors",
+					"cursor-grab active:cursor-grabbing",
+					isDragging && "opacity-50"
+				)}
+			>
+				<button
+					type="button"
+					onClick={onToggle}
+					className="flex items-center gap-2 flex-1 hover:text-primary transition-colors"
+				>
+					{isExpanded ? (
+						<ChevronDown className="h-4 w-4" />
+					) : (
+						<ChevronRight className="h-4 w-4" />
+					)}
+					<Users className="h-4 w-4" />
+					{subgroup.name}
+					<span className="text-muted-foreground font-normal">
+						({guests.length})
+					</span>
+				</button>
+			</div>
+			{isExpanded && (
+				<div className="ml-6 space-y-2">
+					{assignments ? (
+						// Assigned guests with assignment info
+						assignments.map(({ guest, assignment }) => (
+							<GuestCard
+								key={guest.id}
+								guest={guest}
+								color={relationshipColor}
+								onEdit={() => onEditGuest(guest)}
+								assignment={assignment}
+							/>
+						))
+					) : (
+						// Unassigned guests
+						guests.map((guest) => (
+							<GuestCard
+								key={guest.id}
+								guest={guest}
+								color={relationshipColor}
+								onEdit={() => onEditGuest(guest)}
+							/>
+						))
+					)}
+				</div>
+			)}
+		</div>
+	)
+}
 
 export function GuestSidebar() {
 	const [guestFormOpen, setGuestFormOpen] = useState(false)
@@ -33,8 +122,21 @@ export function GuestSidebar() {
 	const unassignedGuests = tables && getUnassignedGuests()
 	const assignedGuestsData = tables && getAssignedGuests()
 
-	// Group unassigned guests by subgroup
+	// Track expanded state for relationships and subgroups/parties
+	const [expandedRelationships, setExpandedRelationships] = useState<Set<string>>(new Set())
 	const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(new Set())
+
+	const toggleRelationship = (relationship: string): void => {
+		setExpandedRelationships((prev) => {
+			const next = new Set(prev)
+			if (next.has(relationship)) {
+				next.delete(relationship)
+			} else {
+				next.add(relationship)
+			}
+			return next
+		})
+	}
 
 	const toggleSubgroup = (subgroupId: string): void => {
 		setExpandedSubgroups((prev) => {
@@ -58,26 +160,86 @@ export function GuestSidebar() {
 		setGuestFormOpen(true)
 	}
 
-	const getGuestColor = (guest: Guest): string => {
-		return relationshipColors.find((rc) => rc.relationship === guest.relationship)?.color || "#888"
-	}
-
 	// Get unique relationships
 	const uniqueRelationships = Array.from(new Set(guests.map((g) => g.relationship)))
 
-	// Organize unassigned guests
-	const unassignedSubgroups = subgroups.filter((sg) =>
-		sg.guestIds.some((gid) => unassignedGuests.find((g) => g.id === gid)),
-	)
+	// Helper to organize guests by relationship -> party -> guests hierarchy
+	const organizeGuestsByRelationship = (guestList: Guest[]) => {
+		const relationshipMap = new Map<string, {
+			parties: Map<string, { subgroup: Subgroup; guests: Guest[] }>,
+			soloGuests: Guest[]
+		}>()
 
-	const unassignedWithoutSubgroup = unassignedGuests.filter((g) => !g.subgroupId)
+		// Initialize map for each relationship
+		const relationships = Array.from(new Set(guestList.map(g => g.relationship)))
+		relationships.forEach(rel => {
+			relationshipMap.set(rel, {
+				parties: new Map(),
+				soloGuests: []
+			})
+		})
 
-	// Organize assigned guests
-	const assignedSubgroups = subgroups.filter((sg) =>
-		sg.guestIds.some((gid) => assignedGuestsData.find((d) => d.guest.id === gid)),
-	)
+		// Organize guests
+		guestList.forEach(guest => {
+			const relData = relationshipMap.get(guest.relationship)
+			if (!relData) return
 
-	const assignedWithoutSubgroup = assignedGuestsData.filter((d) => !d.guest.subgroupId)
+			if (guest.subgroupId) {
+				// Guest belongs to a party
+				const subgroup = subgroups.find(sg => sg.id === guest.subgroupId)
+				if (subgroup) {
+					if (!relData.parties.has(subgroup.id)) {
+						relData.parties.set(subgroup.id, { subgroup, guests: [] })
+					}
+					relData.parties.get(subgroup.id)!.guests.push(guest)
+				}
+			} else {
+				// Solo guest (partySize = 1, no subgroup)
+				relData.soloGuests.push(guest)
+			}
+		})
+
+		return relationshipMap
+	}
+
+	const unassignedByRelationship = organizeGuestsByRelationship(unassignedGuests)
+	
+	// For assigned guests, we need to include assignment data
+	const organizeAssignedByRelationship = () => {
+		const relationshipMap = new Map<string, {
+			parties: Map<string, { subgroup: Subgroup; guestsData: Array<{ guest: Guest; assignment: GuestAssignment }> }>,
+			soloGuestsData: Array<{ guest: Guest; assignment: GuestAssignment }>
+		}>()
+
+		const relationships = Array.from(new Set(assignedGuestsData.map(d => d.guest.relationship)))
+		relationships.forEach(rel => {
+			relationshipMap.set(rel, {
+				parties: new Map(),
+				soloGuestsData: []
+			})
+		})
+
+		assignedGuestsData.forEach(data => {
+			const relData = relationshipMap.get(data.guest.relationship)
+			if (!relData) return
+
+			if (data.guest.subgroupId) {
+				const subgroup = subgroups.find(sg => sg.id === data.guest.subgroupId)
+				if (subgroup) {
+					if (!relData.parties.has(subgroup.id)) {
+						relData.parties.set(subgroup.id, { subgroup, guestsData: [] })
+					}
+					relData.parties.get(subgroup.id)!.guestsData.push(data)
+				}
+			} else {
+				relData.soloGuestsData.push(data)
+			}
+		})
+
+		return relationshipMap
+	}
+
+	const assignedByRelationship = organizeAssignedByRelationship()
 
 	return (
 		<div className="w-80 border-r bg-muted/20 flex flex-col h-full">
@@ -166,41 +328,61 @@ export function GuestSidebar() {
 										All guests are assigned
 									</p>
 								) : (
-									<div className="space-y-2">
-										{/* Unassigned Subgroups */}
-										{unassignedSubgroups.map((subgroup) => {
-											const subgroupGuests = unassignedGuests.filter((g) =>
-												subgroup.guestIds.includes(g.id),
-											)
-											if (subgroupGuests.length === 0) return null
+									<div className="space-y-3">
+										{/* Group by Relationship */}
+										{Array.from(unassignedByRelationship.entries()).map(([relationship, relData]) => {
+											const totalGuests = relData.soloGuests.length + 
+												Array.from(relData.parties.values()).reduce((sum, party) => sum + party.guests.length, 0)
+											
+											if (totalGuests === 0) return null
 
-											const isExpanded = expandedSubgroups.has(subgroup.id)
+											const isRelExpanded = expandedRelationships.has(relationship)
+											const relationshipColor = relationshipColors.find((rc) => rc.relationship === relationship)?.color || "#888"
 
 											return (
-												<div key={subgroup.id} className="space-y-2">
+												<div key={relationship} className="space-y-2">
+													{/* Relationship Header */}
 													<button
 														type="button"
-														onClick={() => toggleSubgroup(subgroup.id)}
-														className="flex items-center gap-2 w-full text-left text-sm font-medium hover:text-primary transition-colors"
+														onClick={() => toggleRelationship(relationship)}
+														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
 													>
-														{isExpanded ? (
+														{isRelExpanded ? (
 															<ChevronDown className="h-4 w-4" />
 														) : (
 															<ChevronRight className="h-4 w-4" />
 														)}
-														<Users className="h-4 w-4" />
-														{subgroup.name}
-														<span className="text-muted-foreground">
-															({subgroupGuests.length})
+														<div 
+															className="h-3 w-3 rounded-full border-2" 
+															style={{ backgroundColor: relationshipColor, borderColor: relationshipColor }}
+														/>
+														{relationship}
+														<span className="text-muted-foreground font-normal">
+															({totalGuests})
 														</span>
 													</button>
-													{isExpanded && (
-														<div className="ml-6 space-y-2">
-															{subgroupGuests.map((guest) => (
+
+													{isRelExpanded && (
+														<div className="ml-5 space-y-2">
+														{/* Parties within this relationship */}
+														{Array.from(relData.parties.values()).map(({ subgroup, guests: partyGuests }) => {
+															return <PartyHeader 
+																key={subgroup.id}
+																subgroup={subgroup}
+																guests={partyGuests}
+																relationshipColor={relationshipColor}
+																isExpanded={expandedSubgroups.has(subgroup.id)}
+																onToggle={() => toggleSubgroup(subgroup.id)}
+																onEditGuest={handleEditGuest}
+															/>
+														})}
+
+															{/* Solo guests (partySize = 1) */}
+															{relData.soloGuests.map((guest) => (
 																<GuestCard
 																	key={guest.id}
 																	guest={guest}
-																	color={getGuestColor(guest)}
+																	color={relationshipColor}
 																	onEdit={() => handleEditGuest(guest)}
 																/>
 															))}
@@ -209,16 +391,6 @@ export function GuestSidebar() {
 												</div>
 											)
 										})}
-
-										{/* Unassigned individual guests */}
-										{unassignedWithoutSubgroup.map((guest) => (
-											<GuestCard
-												key={guest.id}
-												guest={guest}
-												color={getGuestColor(guest)}
-												onEdit={() => handleEditGuest(guest)}
-											/>
-										))}
 									</div>
 								)}
 							</div>
@@ -233,41 +405,65 @@ export function GuestSidebar() {
 										No guests assigned yet
 									</p>
 								) : (
-									<div className="space-y-2">
-										{/* Assigned Subgroups */}
-										{assignedSubgroups.map((subgroup) => {
-											const subgroupAssignments = assignedGuestsData.filter((d) =>
-												subgroup.guestIds.includes(d.guest.id),
-											)
-											if (subgroupAssignments.length === 0) return null
+									<div className="space-y-3">
+										{/* Group by Relationship */}
+										{Array.from(assignedByRelationship.entries()).map(([relationship, relData]) => {
+											const totalGuests = relData.soloGuestsData.length + 
+												Array.from(relData.parties.values()).reduce((sum, party) => sum + party.guestsData.length, 0)
+											
+											if (totalGuests === 0) return null
 
-											const isExpanded = expandedSubgroups.has(subgroup.id)
+											const isRelExpanded = expandedRelationships.has(relationship)
+											const relationshipColor = relationshipColors.find((rc) => rc.relationship === relationship)?.color || "#888"
 
 											return (
-												<div key={subgroup.id} className="space-y-2">
+												<div key={relationship} className="space-y-2">
+													{/* Relationship Header */}
 													<button
 														type="button"
-														onClick={() => toggleSubgroup(subgroup.id)}
-														className="flex items-center gap-2 w-full text-left text-sm font-medium hover:text-primary transition-colors"
+														onClick={() => toggleRelationship(relationship)}
+														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
 													>
-														{isExpanded ? (
+														{isRelExpanded ? (
 															<ChevronDown className="h-4 w-4" />
 														) : (
 															<ChevronRight className="h-4 w-4" />
 														)}
-														<Users className="h-4 w-4" />
-														{subgroup.name}
-														<span className="text-muted-foreground">
-															({subgroupAssignments.length})
+														<div 
+															className="h-3 w-3 rounded-full border-2" 
+															style={{ backgroundColor: relationshipColor, borderColor: relationshipColor }}
+														/>
+														{relationship}
+														<span className="text-muted-foreground font-normal">
+															({totalGuests})
 														</span>
 													</button>
-													{isExpanded && (
-														<div className="ml-6 space-y-2">
-															{subgroupAssignments.map(({ guest, assignment }) => (
+
+													{isRelExpanded && (
+														<div className="ml-5 space-y-2">
+														{/* Parties within this relationship */}
+														{Array.from(relData.parties.values()).map(({ subgroup, guestsData }) => {
+															const guests = guestsData.map(d => d.guest)
+															const assignments = guestsData.map(d => ({ guest: d.guest, assignment: d.assignment }))
+															
+															return <PartyHeader 
+																key={subgroup.id}
+																subgroup={subgroup}
+																guests={guests}
+																relationshipColor={relationshipColor}
+																isExpanded={expandedSubgroups.has(subgroup.id)}
+																onToggle={() => toggleSubgroup(subgroup.id)}
+																onEditGuest={handleEditGuest}
+																assignments={assignments}
+															/>
+														})}
+
+															{/* Solo guests (partySize = 1) */}
+															{relData.soloGuestsData.map(({ guest, assignment }) => (
 																<GuestCard
 																	key={guest.id}
 																	guest={guest}
-																	color={getGuestColor(guest)}
+																	color={relationshipColor}
 																	onEdit={() => handleEditGuest(guest)}
 																	assignment={assignment}
 																/>
@@ -277,17 +473,6 @@ export function GuestSidebar() {
 												</div>
 											)
 										})}
-
-										{/* Assigned individual guests */}
-										{assignedWithoutSubgroup.map(({ guest, assignment }) => (
-											<GuestCard
-												key={guest.id}
-												guest={guest}
-												color={getGuestColor(guest)}
-												onEdit={() => handleEditGuest(guest)}
-												assignment={assignment}
-											/>
-										))}
 									</div>
 								)}
 							</div>
