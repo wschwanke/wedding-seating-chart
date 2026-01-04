@@ -3,7 +3,7 @@ import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import type { Guest } from "@/types"
-import { User, Trash2, X } from "lucide-react"
+import { User, X } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { useSeatingStore } from "@/stores/useSeatingStore"
@@ -25,7 +25,6 @@ export function Chair({
 }: ChairProps) {
 	const [popoverOpen, setPopoverOpen] = useState(false)
 	const unassignGuest = useSeatingStore((state) => state.unassignGuest)
-	const deleteGuest = useSeatingStore((state) => state.deleteGuest)
 
 	const { isOver, setNodeRef: setDropRef } = useDroppable({
 		id: `${tableId}-${seatIndex}`,
@@ -47,18 +46,6 @@ export function Chair({
 	const handleRemoveFromSeat = (): void => {
 		if (guest) {
 			unassignGuest(guest.id)
-			setPopoverOpen(false)
-		}
-	}
-
-	const handleDeleteGuest = (): void => {
-		if (
-			guest &&
-			window.confirm(
-				`Are you sure you want to delete ${guest.firstName} ${guest.lastName}?`,
-			)
-		) {
-			deleteGuest(guest.id)
 			setPopoverOpen(false)
 		}
 	}
@@ -138,33 +125,22 @@ export function Chair({
 							<p className="font-medium">
 								{guest.firstName} {guest.lastName}
 							</p>
-							<p className="text-sm text-muted-foreground">{guest.group}</p>
+							<p className="text-sm text-muted-foreground">{guest.relationship}</p>
 							{guest.partySize > 1 && (
 								<p className="text-xs text-muted-foreground">
 									Party of {guest.partySize}
 								</p>
 							)}
 						</div>
-						<div className="flex flex-col gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={handleRemoveFromSeat}
-								className="w-full justify-start"
-							>
-								<X className="h-4 w-4 mr-2" />
-								Remove from Seat
-							</Button>
-							<Button
-								variant="destructive"
-								size="sm"
-								onClick={handleDeleteGuest}
-								className="w-full justify-start"
-							>
-								<Trash2 className="h-4 w-4 mr-2" />
-								Delete Guest
-							</Button>
-						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={handleRemoveFromSeat}
+							className="w-full justify-start"
+						>
+							<X className="h-4 w-4 mr-2" />
+							Remove from Seat
+						</Button>
 					</div>
 				</PopoverContent>
 			</Popover>

@@ -30,26 +30,26 @@ export function GuestForm({
 	const [firstName, setFirstName] = useState("")
 	const [lastName, setLastName] = useState("")
 	const [partySize, setPartySize] = useState(1)
-	const [group, setGroup] = useState("")
+	const [relationship, setRelationship] = useState("")
 
 	useEffect(() => {
 		if (guest) {
 			setFirstName(guest.firstName)
 			setLastName(guest.lastName)
 			setPartySize(guest.partySize)
-			setGroup(guest.group)
+			setRelationship(guest.relationship)
 		} else {
 			setFirstName("")
 			setLastName("")
 			setPartySize(1)
-			setGroup("")
+			setRelationship("")
 		}
 	}, [guest, open])
 
 	const handleSubmit = (e: React.FormEvent): void => {
 		e.preventDefault()
 
-		if (!firstName.trim() || !lastName.trim() || !group.trim()) {
+		if (!firstName.trim() || !lastName.trim() || !relationship.trim()) {
 			return
 		}
 
@@ -58,16 +58,17 @@ export function GuestForm({
 			updateGuest(guest.id, {
 				firstName: firstName.trim(),
 				lastName: lastName.trim(),
-				group: group.trim(),
-				// Note: party size is immutable after creation to avoid complications
+				relationship: relationship.trim(),
+				// Note: party size and party name are immutable after creation
 			})
 		} else {
-			// Add new guest
+			// Add new guest (party name is auto-generated in store)
 			addGuest({
 				firstName: firstName.trim(),
 				lastName: lastName.trim(),
 				partySize,
-				group: group.trim(),
+				party: "", // Will be auto-generated in store
+				relationship: relationship.trim(),
 			})
 		}
 
@@ -130,11 +131,11 @@ export function GuestForm({
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="group">Relationship / Group</Label>
+							<Label htmlFor="relationship">Relationship</Label>
 							<Input
-								id="group"
-								value={group}
-								onChange={(e) => setGroup(e.target.value)}
+								id="relationship"
+								value={relationship}
+								onChange={(e) => setRelationship(e.target.value)}
 								placeholder="Family, Friends, Work, etc."
 								required
 							/>

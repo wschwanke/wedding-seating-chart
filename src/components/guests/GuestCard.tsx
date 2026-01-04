@@ -72,7 +72,7 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 							{guest.firstName} {guest.lastName}
 						</p>
 					</div>
-					<p className="text-sm text-muted-foreground truncate">{guest.group}</p>
+					<p className="text-sm text-muted-foreground truncate">{guest.relationship}</p>
 					{guest.partySize > 1 && (
 						<p className="text-xs text-muted-foreground">
 							Party of {guest.partySize}

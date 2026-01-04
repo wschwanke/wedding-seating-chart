@@ -3,7 +3,8 @@ export interface Guest {
 	firstName: string
 	lastName: string
 	partySize: number
-	group: string
+	party: string // Auto-generated party name (e.g., "John Smith's Party")
+	relationship: string // User-provided relationship (e.g., "Family", "Friends")
 	subgroupId?: string
 	isMainGuest: boolean // True if this is the primary person, false if "+1"
 	parentGuestId?: string // For "+1" guests, reference to main guest
@@ -22,22 +23,22 @@ export interface Table {
 	seats: (string | null)[] // Array of guest IDs or null for empty seats
 }
 
-export interface GroupColor {
-	group: string
+export interface RelationshipColor {
+	relationship: string
 	color: string
 }
 
 export interface Settings {
 	tableCount: number
 	defaultChairCount: number
-	groupColors: GroupColor[]
+	relationshipColors: RelationshipColor[]
 }
 
 export interface DuplicateGuest {
 	id: string
 	firstName: string
 	lastName: string
-	group: string
+	relationship: string
 }
 
 export interface GuestAssignment {
@@ -77,7 +78,7 @@ export interface SeatingStore {
 
 	// Settings actions
 	updateSettings: (settings: Partial<Settings>) => void
-	updateGroupColor: (group: string, color: string) => void
+	updateRelationshipColor: (relationship: string, color: string) => void
 
 	// Utility actions
 	autoAssign: () => void
@@ -93,5 +94,5 @@ export interface CSVRow {
 	"first name": string
 	"last name": string
 	"party size": string
-	"relationship or group": string
+	"relationship": string
 }

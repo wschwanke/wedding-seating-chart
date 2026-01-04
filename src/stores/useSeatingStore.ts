@@ -14,7 +14,7 @@ import { generateId, generateRandomColor } from "@/lib/utils"
 const DEFAULT_SETTINGS: Settings = {
 	tableCount: 10,
 	defaultChairCount: 10,
-	groupColors: [],
+	relationshipColors: [],
 }
 
 const createInitialTables = (count: number, chairCount: number): Table[] => {
@@ -43,10 +43,16 @@ export const useSeatingStore = create<SeatingStore>()(
 				const id = generateId()
 				const state = get()
 
+				// Auto-generate party name if party size > 1
+				const party = guestData.partySize > 1 
+					? `${guestData.firstName} ${guestData.lastName}'s Party` 
+					: ""
+
 				// Create main guest
 				const mainGuest: Guest = {
 					...guestData,
 					id,
+					party,
 					isMainGuest: true,
 				}
 
@@ -63,7 +69,8 @@ export const useSeatingStore = create<SeatingStore>()(
 							firstName: `${guestData.firstName} ${guestData.lastName}'s Guest`,
 							lastName: `${i}`,
 							partySize: 1,
-							group: guestData.group,
+							party,
+							relationship: guestData.relationship,
 							subgroupId,
 							isMainGuest: false,
 							parentGuestId: id,
@@ -75,7 +82,7 @@ export const useSeatingStore = create<SeatingStore>()(
 					// Create subgroup
 					const subgroup: Subgroup = {
 						id: subgroupId,
-						name: `${guestData.firstName} ${guestData.lastName}'s Party`,
+						name: party,
 						guestIds: [id, ...partyMembers.map((g) => g.id)],
 					}
 
@@ -92,9 +99,9 @@ export const useSeatingStore = create<SeatingStore>()(
 					})
 				}
 
-				// Auto-assign color to new group if it doesn't exist
-				if (!state.settings.groupColors.find((gc) => gc.group === guestData.group)) {
-					get().updateGroupColor(guestData.group, generateRandomColor())
+				// Auto-assign color to new relationship if it doesn't exist
+				if (!state.settings.relationshipColors.find((rc) => rc.relationship === guestData.relationship)) {
+					get().updateRelationshipColor(guestData.relationship, generateRandomColor())
 				}
 
 				return id
@@ -166,15 +173,22 @@ export const useSeatingStore = create<SeatingStore>()(
 							id: generateId(),
 							firstName: guestData.firstName,
 							lastName: guestData.lastName,
-							group: guestData.group,
+							relationship: guestData.relationship,
 						})
 						// Still import but mark as duplicate
 					}
 
 					const id = generateId()
+					
+					// Auto-generate party name if party size > 1
+					const party = guestData.partySize > 1 
+						? `${guestData.firstName} ${guestData.lastName}'s Party` 
+						: ""
+
 					const mainGuest: Guest = {
 						...guestData,
 						id,
+						party,
 						isMainGuest: true,
 					}
 
@@ -191,7 +205,8 @@ export const useSeatingStore = create<SeatingStore>()(
 								firstName: `${guestData.firstName} ${guestData.lastName}'s Guest`,
 								lastName: `${i}`,
 								partySize: 1,
-								group: guestData.group,
+								party,
+								relationship: guestData.relationship,
 								subgroupId,
 								isMainGuest: false,
 								parentGuestId: id,
@@ -203,7 +218,7 @@ export const useSeatingStore = create<SeatingStore>()(
 						// Create subgroup
 						newSubgroups.push({
 							id: subgroupId,
-							name: `${guestData.firstName} ${guestData.lastName}'s Party`,
+							name: party,
 							guestIds: [id, ...partyMembers.map((g) => g.id)],
 						})
 
@@ -211,9 +226,9 @@ export const useSeatingStore = create<SeatingStore>()(
 						mainGuest.subgroupId = subgroupId
 					}
 
-					// Auto-assign color to new group if it doesn't exist
-					if (!state.settings.groupColors.find((gc) => gc.group === guestData.group)) {
-						state.updateGroupColor(guestData.group, generateRandomColor())
+					// Auto-assign color to new relationship if it doesn't exist
+					if (!state.settings.relationshipColors.find((rc) => rc.relationship === guestData.relationship)) {
+						state.updateRelationshipColor(guestData.relationship, generateRandomColor())
 					}
 				}
 
@@ -236,7 +251,7 @@ export const useSeatingStore = create<SeatingStore>()(
 						(g) =>
 							g.firstName === duplicate.firstName &&
 							g.lastName === duplicate.lastName &&
-							g.group === duplicate.group,
+							g.relationship === duplicate.relationship,
 					)
 
 					if (guestToRemove) {
@@ -466,23 +481,23 @@ export const useSeatingStore = create<SeatingStore>()(
 				}
 			},
 
-			updateGroupColor: (group, color) => {
+			updateRelationshipColor: (relationship, color) => {
 				const state = get()
-				const existingColorIndex = state.settings.groupColors.findIndex(
-					(gc) => gc.group === group,
+				const existingColorIndex = state.settings.relationshipColors.findIndex(
+					(rc) => rc.relationship === relationship,
 				)
 
 				if (existingColorIndex !== -1) {
-					const updatedColors = [...state.settings.groupColors]
-					updatedColors[existingColorIndex] = { group, color }
+					const updatedColors = [...state.settings.relationshipColors]
+					updatedColors[existingColorIndex] = { relationship, color }
 					set({
-						settings: { ...state.settings, groupColors: updatedColors },
+						settings: { ...state.settings, relationshipColors: updatedColors },
 					})
 				} else {
 					set({
 						settings: {
 							...state.settings,
-							groupColors: [...state.settings.groupColors, { group, color }],
+							relationshipColors: [...state.settings.relationshipColors, { relationship, color }],
 						},
 					})
 				}

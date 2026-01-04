@@ -1,13 +1,13 @@
 import type { Guest, Table, Subgroup } from "@/types"
 
-interface GroupWithGuests {
-	group: string
+interface RelationshipWithGuests {
+	relationship: string
 	guests: Guest[]
 	totalSeats: number
 }
 
 /**
- * Auto-assign guests to tables, prioritizing keeping groups/relationships together
+ * Auto-assign guests to tables, prioritizing keeping relationships together
  */
 export function autoAssignGuests(
 	guests: Guest[],
@@ -20,23 +20,23 @@ export function autoAssignGuests(
 		seats: Array(table.chairCount).fill(null),
 	}))
 
-	// Group guests by their relationship/group
-	const groupMap = new Map<string, Guest[]>()
+	// Group guests by their relationship
+	const relationshipMap = new Map<string, Guest[]>()
 
 	for (const guest of guests) {
-		const group = guest.group
-		if (!groupMap.has(group)) {
-			groupMap.set(group, [])
+		const relationship = guest.relationship
+		if (!relationshipMap.has(relationship)) {
+			relationshipMap.set(relationship, [])
 		}
-		groupMap.get(group)!.push(guest)
+		relationshipMap.get(relationship)!.push(guest)
 	}
 
-	// Convert to sorted array (largest groups first)
-	const groupsWithGuests: GroupWithGuests[] = Array.from(groupMap.entries())
-		.map(([group, guestsInGroup]) => ({
-			group,
-			guests: guestsInGroup,
-			totalSeats: guestsInGroup.reduce((sum, g) => sum + g.partySize, 0),
+	// Convert to sorted array (largest relationship groups first)
+	const relationshipsWithGuests: RelationshipWithGuests[] = Array.from(relationshipMap.entries())
+		.map(([relationship, guestsInRelationship]) => ({
+			relationship,
+			guests: guestsInRelationship,
+			totalSeats: guestsInRelationship.reduce((sum, g) => sum + g.partySize, 0),
 		}))
 		.sort((a, b) => b.totalSeats - a.totalSeats)
 
@@ -73,12 +73,12 @@ export function autoAssignGuests(
 		return guests.filter((g) => subgroup.guestIds.includes(g.id))
 	}
 
-	// Try to seat each group together at a table
-	for (const groupData of groupsWithGuests) {
+	// Try to seat each relationship group together at a table
+	for (const relationshipData of relationshipsWithGuests) {
 		// Process guests, handling subgroups
 		const processedGuests = new Set<string>()
 
-		for (const guest of groupData.guests) {
+		for (const guest of relationshipData.guests) {
 			if (processedGuests.has(guest.id)) continue
 
 			const subgroupMembers = getSubgroupMembers(guest)

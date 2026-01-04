@@ -21,15 +21,17 @@ export function GuestSidebar() {
 	const guests = useSeatingStore((state) => state.guests)
 	const subgroups = useSeatingStore((state) => state.subgroups)
 	const duplicates = useSeatingStore((state) => state.duplicates)
-	const groupColors = useSeatingStore((state) => state.settings.groupColors)
-	const updateGroupColor = useSeatingStore((state) => state.updateGroupColor)
+	const tables = useSeatingStore((state) => state.tables) // Subscribe to trigger re-render on seat changes
+	const relationshipColors = useSeatingStore((state) => state.settings.relationshipColors)
+	const updateRelationshipColor = useSeatingStore((state) => state.updateRelationshipColor)
 	const resolveDuplicate = useSeatingStore((state) => state.resolveDuplicate)
 	const getUnassignedGuests = useSeatingStore((state) => state.getUnassignedGuests)
 	const getAssignedGuests = useSeatingStore((state) => state.getAssignedGuests)
 	const autoAssign = useSeatingStore((state) => state.autoAssign)
 
-	const unassignedGuests = getUnassignedGuests()
-	const assignedGuestsData = getAssignedGuests()
+	// Force reactivity - re-compute when tables change
+	const unassignedGuests = tables && getUnassignedGuests()
+	const assignedGuestsData = tables && getAssignedGuests()
 
 	// Group unassigned guests by subgroup
 	const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(new Set())
@@ -57,11 +59,11 @@ export function GuestSidebar() {
 	}
 
 	const getGuestColor = (guest: Guest): string => {
-		return groupColors.find((gc) => gc.group === guest.group)?.color || "#888"
+		return relationshipColors.find((rc) => rc.relationship === guest.relationship)?.color || "#888"
 	}
 
-	// Get unique groups
-	const uniqueGroups = Array.from(new Set(guests.map((g) => g.group)))
+	// Get unique relationships
+	const uniqueRelationships = Array.from(new Set(guests.map((g) => g.relationship)))
 
 	// Organize unassigned guests
 	const unassignedSubgroups = subgroups.filter((sg) =>
@@ -296,18 +298,18 @@ export function GuestSidebar() {
 				<TabsContent value="groups" className="flex-1 overflow-hidden mt-2">
 					<ScrollArea className="h-full">
 						<div className="px-4 space-y-3 pb-4">
-							{uniqueGroups.length === 0 ? (
+							{uniqueRelationships.length === 0 ? (
 								<p className="text-sm text-muted-foreground text-center py-8">
-									No groups yet
+									No relationships yet
 								</p>
 							) : (
-								uniqueGroups.map((group) => {
+								uniqueRelationships.map((relationship) => {
 									const color =
-										groupColors.find((gc) => gc.group === group)?.color || "#888"
-									const groupGuests = guests.filter((g) => g.group === group)
+										relationshipColors.find((rc) => rc.relationship === relationship)?.color || "#888"
+									const relationshipGuests = guests.filter((g) => g.relationship === relationship)
 
 									return (
-										<div key={group} className="space-y-2">
+										<div key={relationship} className="space-y-2">
 											<div className="flex items-center gap-2">
 												<Popover>
 													<PopoverTrigger asChild>
@@ -319,21 +321,21 @@ export function GuestSidebar() {
 													</PopoverTrigger>
 													<PopoverContent className="w-64">
 														<div className="space-y-2">
-															<Label htmlFor={`color-${group}`}>Color for "{group}"</Label>
+															<Label htmlFor={`color-${relationship}`}>Color for "{relationship}"</Label>
 															<Input
-																id={`color-${group}`}
+																id={`color-${relationship}`}
 																type="color"
 																value={color}
 																onChange={(e) =>
-																	updateGroupColor(group, e.target.value)
+																	updateRelationshipColor(relationship, e.target.value)
 																}
 															/>
 														</div>
 													</PopoverContent>
 												</Popover>
-												<span className="font-medium">{group}</span>
+												<span className="font-medium">{relationship}</span>
 												<span className="text-sm text-muted-foreground">
-													({groupGuests.length})
+													({relationshipGuests.length})
 												</span>
 											</div>
 										</div>

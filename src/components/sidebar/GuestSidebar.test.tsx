@@ -12,7 +12,8 @@ const mockGuests = [
 		firstName: "John",
 		lastName: "Smith",
 		partySize: 1,
-		group: "Family",
+		party: "",
+		relationship: "Family",
 		isMainGuest: true,
 	},
 	{
@@ -20,12 +21,13 @@ const mockGuests = [
 		firstName: "Jane",
 		lastName: "Doe",
 		partySize: 1,
-		group: "Friends",
+		party: "",
+		relationship: "Friends",
 		isMainGuest: true,
 	},
 ]
 
-const mockUpdateGroupColor = vi.fn()
+const mockUpdateRelationshipColor = vi.fn()
 const mockResolveDuplicate = vi.fn()
 const mockAutoAssign = vi.fn()
 
@@ -38,13 +40,14 @@ vi.mock("@/stores/useSeatingStore", () => ({
 			guests: mockGuests,
 			subgroups: [],
 			duplicates: mockDuplicates,
+			tables: [], // Need to include tables for reactivity
 			settings: {
-				groupColors: [
-					{ group: "Family", color: "#ff0000" },
-					{ group: "Friends", color: "#00ff00" },
+				relationshipColors: [
+					{ relationship: "Family", color: "#ff0000" },
+					{ relationship: "Friends", color: "#00ff00" },
 				],
 			},
-			updateGroupColor: mockUpdateGroupColor,
+			updateRelationshipColor: mockUpdateRelationshipColor,
 			resolveDuplicate: mockResolveDuplicate,
 			getUnassignedGuests: vi.fn(() => mockGuests),
 			getAssignedGuests: vi.fn(() => []),
@@ -162,7 +165,7 @@ describe("GuestSidebar", () => {
 				id: "dup-1",
 				firstName: "John",
 				lastName: "Smith",
-				group: "Family",
+				relationship: "Family",
 			},
 		]
 

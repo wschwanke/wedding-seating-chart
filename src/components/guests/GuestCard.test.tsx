@@ -21,7 +21,7 @@ describe("GuestCard", () => {
 		firstName: "John",
 		lastName: "Smith",
 		partySize: 1,
-		group: "Family",
+		party: "", relationship: "Family",
 		isMainGuest: true,
 	}
 

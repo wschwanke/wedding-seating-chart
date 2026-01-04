@@ -21,7 +21,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			const guests = getStore().guests
@@ -36,7 +36,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 3,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			const { guests, subgroups } = getStore()
@@ -57,7 +57,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			getStore().updateGuest(guestId, { firstName: "Jane" })
@@ -72,7 +72,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			getStore().deleteGuest(guestId)
@@ -85,7 +85,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 3,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			expect(getStore().guests).toHaveLength(3)
@@ -103,10 +103,10 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
-			const groupColor = getStore().settings.groupColors.find((gc) => gc.group === "Family")
+			const groupColor = getStore().settings.relationshipColors.find((rc) => rc.relationship === "Family")
 			expect(groupColor).toBeDefined()
 			expect(groupColor?.color).toMatch(/^#[0-9a-f]{6}$/i)
 		})
@@ -118,7 +118,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			const tableId = getStore().tables[0].id
@@ -132,7 +132,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			const tableId = getStore().tables[0].id
@@ -150,7 +150,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			const tableId = getStore().tables[0].id
@@ -188,13 +188,13 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 			const guest2 = getStore().addGuest({
 				firstName: "Jane",
 				lastName: "Doe",
 				partySize: 1,
-				group: "Friends",
+				party: "", relationship: "Friends",
 			})
 
 			// Assign one guest
@@ -210,7 +210,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			const tableId = getStore().tables[0].id
@@ -228,7 +228,7 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			const tableId = getStore().tables[0].id
@@ -249,7 +249,7 @@ describe("useSeatingStore", () => {
 					firstName: `Guest${i}`,
 					lastName: "Test",
 					partySize: 1,
-					group: "Family",
+					party: "", relationship: "Family",
 				})
 				getStore().assignToSeat(guestId, tableId, i)
 			}
@@ -263,13 +263,13 @@ describe("useSeatingStore", () => {
 				firstName: "Extra1",
 				lastName: "Guest",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 			const extra2 = getStore().addGuest({
 				firstName: "Extra2",
 				lastName: "Guest",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 			getStore().assignToSeat(extra1, tableId, 10)
 			getStore().assignToSeat(extra2, tableId, 11)
@@ -293,12 +293,12 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
-			getStore().updateGroupColor("Family", "#ff0000")
+			getStore().updateRelationshipColor("Family", "#ff0000")
 
-			const groupColor = getStore().settings.groupColors.find((gc) => gc.group === "Family")
+			const groupColor = getStore().settings.relationshipColors.find((rc) => rc.relationship === "Family")
 			expect(groupColor?.color).toBe("#ff0000")
 		})
 
@@ -320,8 +320,8 @@ describe("useSeatingStore", () => {
 	describe("Import Guests", () => {
 		it("should import multiple guests", () => {
 			getStore().importGuests([
-				{ firstName: "John", lastName: "Smith", partySize: 1, group: "Family" },
-				{ firstName: "Jane", lastName: "Doe", partySize: 2, group: "Friends" },
+				{ firstName: "John", lastName: "Smith", partySize: 1, party: "", relationship: "Family" },
+				{ firstName: "Jane", lastName: "Doe", partySize: 2, party: "", relationship: "Friends" },
 			])
 
 			// 1 guest + 1 guest with party size 2 (2 total guests) = 3 guests
@@ -333,11 +333,11 @@ describe("useSeatingStore", () => {
 				firstName: "John",
 				lastName: "Smith",
 				partySize: 1,
-				group: "Family",
+				party: "", relationship: "Family",
 			})
 
 			getStore().importGuests([
-				{ firstName: "John", lastName: "Smith", partySize: 1, group: "Family" },
+				{ firstName: "John", lastName: "Smith", partySize: 1, party: "", relationship: "Family" },
 			])
 
 			expect(getStore().duplicates).toHaveLength(1)

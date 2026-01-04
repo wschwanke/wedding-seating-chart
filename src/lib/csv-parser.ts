@@ -22,7 +22,7 @@ export function parseCSV(file: File): Promise<CSVParseResult> {
 					"first name",
 					"last name",
 					"party size",
-					"relationship or group",
+					"relationship",
 				]
 				const headers = results.meta.fields || []
 
@@ -32,7 +32,7 @@ export function parseCSV(file: File): Promise<CSVParseResult> {
 
 				if (missingHeaders.length > 0) {
 					errors.push(
-						`Missing required columns: ${missingHeaders.join(", ")}. Expected headers: "first name", "last name", "party size", "relationship or group"`,
+						`Missing required columns: ${missingHeaders.join(", ")}. Expected headers: "first name", "last name", "party size", "relationship"`,
 					)
 					resolve({ success: false, guests: [], errors })
 					return
@@ -58,25 +58,38 @@ export function parseCSV(file: File): Promise<CSVParseResult> {
 						return
 					}
 
-					if (!row["relationship or group"]?.trim()) {
-						errors.push(`Row ${rowNumber}: Missing relationship or group`)
+					if (!row["relationship"]?.trim()) {
+						errors.push(`Row ${rowNumber}: Missing relationship`)
 						return
 					}
 
 					const partySize = Number.parseInt(row["party size"], 10)
 
-					if (Number.isNaN(partySize) || partySize < 1) {
+					if (Number.isNaN(partySize)) {
 						errors.push(
-							`Row ${rowNumber}: Invalid party size "${row["party size"]}" (must be a number >= 1)`,
+							`Row ${rowNumber}: Invalid party size "${row["party size"]}" (must be a number)`,
 						)
 						return
 					}
 
+					// Ignore rows where party size is 0 or negative
+					if (partySize < 1) {
+						return
+					}
+
+					const firstName = row["first name"].trim()
+					const lastName = row["last name"].trim()
+					const relationship = row["relationship"].trim()
+					
+					// Generate party name
+					const party = partySize > 1 ? `${firstName} ${lastName}'s Party` : ""
+
 					guests.push({
-						firstName: row["first name"].trim(),
-						lastName: row["last name"].trim(),
+						firstName,
+						lastName,
 						partySize,
-						group: row["relationship or group"].trim(),
+						party,
+						relationship,
 					})
 				})
 
@@ -99,7 +112,7 @@ export function parseCSV(file: File): Promise<CSVParseResult> {
 
 export function downloadSampleCSV(): void {
 	const sampleData = [
-		["first name", "last name", "party size", "relationship or group"],
+		["first name", "last name", "party size", "relationship"],
 		["John", "Smith", "2", "Family"],
 		["Jane", "Doe", "1", "Friends"],
 		["Bob", "Johnson", "3", "Work"],

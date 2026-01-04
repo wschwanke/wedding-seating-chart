@@ -3,7 +3,7 @@ import { parseCSV } from "./csv-parser"
 
 describe("CSV Parser", () => {
 	it("should parse valid CSV with correct headers", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
 John,Smith,2,Family
 Jane,Doe,1,Friends`
 
@@ -17,11 +17,12 @@ Jane,Doe,1,Friends`
 		expect(result.guests[0].firstName).toBe("John")
 		expect(result.guests[0].lastName).toBe("Smith")
 		expect(result.guests[0].partySize).toBe(2)
-		expect(result.guests[0].group).toBe("Family")
+		expect(result.guests[0].relationship).toBe("Family")
+		expect(result.guests[0].party).toBe("John Smith's Party")
 	})
 
 	it("should handle case-insensitive headers", async () => {
-		const csvContent = `FIRST NAME,LAST NAME,PARTY SIZE,RELATIONSHIP OR GROUP
+		const csvContent = `FIRST NAME,LAST NAME,PARTY SIZE,RELATIONSHIP
 John,Smith,1,Family`
 
 		const file = new File([csvContent], "guests.csv", { type: "text/csv" })
@@ -32,7 +33,7 @@ John,Smith,1,Family`
 	})
 
 	it("should trim whitespace from values", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
   John  ,  Smith  ,  1  ,  Family  `
 
 		const file = new File([csvContent], "guests.csv", { type: "text/csv" })
@@ -41,7 +42,7 @@ John,Smith,1,Family`
 		expect(result.success).toBe(true)
 		expect(result.guests[0].firstName).toBe("John")
 		expect(result.guests[0].lastName).toBe("Smith")
-		expect(result.guests[0].group).toBe("Family")
+		expect(result.guests[0].relationship).toBe("Family")
 	})
 
 	it("should reject CSV with missing headers", async () => {
@@ -57,7 +58,7 @@ John,Smith,1`
 	})
 
 	it("should reject rows with missing first name", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
 ,Smith,1,Family`
 
 		const file = new File([csvContent], "guests.csv", { type: "text/csv" })
@@ -68,7 +69,7 @@ John,Smith,1`
 	})
 
 	it("should reject rows with missing last name", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
 John,,1,Family`
 
 		const file = new File([csvContent], "guests.csv", { type: "text/csv" })
@@ -79,7 +80,7 @@ John,,1,Family`
 	})
 
 	it("should reject rows with invalid party size", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
 John,Smith,abc,Family`
 
 		const file = new File([csvContent], "guests.csv", { type: "text/csv" })
@@ -89,19 +90,22 @@ John,Smith,abc,Family`
 		expect(result.errors[0]).toContain("Invalid party size")
 	})
 
-	it("should reject rows with party size less than 1", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
-John,Smith,0,Family`
+	it("should ignore rows with party size less than 1", async () => {
+		const csvContent = `first name,last name,party size,relationship
+John,Smith,0,Family
+Jane,Doe,1,Friends`
 
 		const file = new File([csvContent], "guests.csv", { type: "text/csv" })
 		const result = await parseCSV(file)
 
-		expect(result.success).toBe(false)
-		expect(result.errors[0]).toContain("Invalid party size")
+		// Party size 0 should be silently ignored, only Jane should be imported
+		expect(result.success).toBe(true)
+		expect(result.guests).toHaveLength(1)
+		expect(result.guests[0].firstName).toBe("Jane")
 	})
 
 	it("should skip empty lines", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
 John,Smith,1,Family
 
 Jane,Doe,1,Friends`
@@ -114,7 +118,7 @@ Jane,Doe,1,Friends`
 	})
 
 	it("should parse multiple valid rows", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
 John,Smith,1,Family
 Jane,Doe,2,Friends
 Bob,Johnson,3,Work
@@ -134,7 +138,7 @@ Alice,Williams,1,Family`
 	})
 
 	it("should collect all validation errors", async () => {
-		const csvContent = `first name,last name,party size,relationship or group
+		const csvContent = `first name,last name,party size,relationship
 ,Smith,1,Family
 John,,2,Friends
 Bob,Johnson,abc,Work`
