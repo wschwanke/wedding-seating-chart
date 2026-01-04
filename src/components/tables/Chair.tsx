@@ -110,7 +110,7 @@ export const Chair = memo(function Chair({
 						}}
 					className={cn(
 						"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-[transform,box-shadow,border-color]",
-						"bg-background border-primary shadow-md cursor-pointer hover:scale-105",
+						"bg-background border-primary shadow-md cursor-grab active:cursor-grabbing hover:scale-105 select-none",
 						isOver && "ring-2 ring-primary ring-offset-2 scale-110",
 						isDragging && "opacity-30",
 					)}
