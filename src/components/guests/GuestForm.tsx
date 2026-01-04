@@ -10,8 +10,10 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Combobox, type ComboboxItem } from "@/components/ui/combobox"
 import { useSeatingStore } from "@/stores/useSeatingStore"
 import type { Guest } from "@/types"
+import { Plus } from "lucide-react"
 
 interface GuestFormProps {
 	open: boolean
@@ -26,30 +28,37 @@ export function GuestForm({
 }: GuestFormProps) {
 	const addGuest = useSeatingStore((state) => state.addGuest)
 	const updateGuest = useSeatingStore((state) => state.updateGuest)
+	const updateGuestParty = useSeatingStore((state) => state.updateGuestParty)
+	const addGuestToParty = useSeatingStore((state) => state.addGuestToParty)
+	const relationships = useSeatingStore((state) => state.relationships)
+	const subgroups = useSeatingStore((state) => state.subgroups)
 
 	const [firstName, setFirstName] = useState("")
 	const [lastName, setLastName] = useState("")
 	const [partySize, setPartySize] = useState(1)
-	const [relationship, setRelationship] = useState("")
+	const [relationshipId, setRelationshipId] = useState("")
+	const [subgroupId, setSubgroupId] = useState<string>("")
 
 	useEffect(() => {
 		if (guest) {
 			setFirstName(guest.firstName)
 			setLastName(guest.lastName)
 			setPartySize(guest.partySize)
-			setRelationship(guest.relationship)
+			setRelationshipId(guest.relationshipId)
+			setSubgroupId(guest.subgroupId || "")
 		} else {
 			setFirstName("")
 			setLastName("")
 			setPartySize(1)
-			setRelationship("")
+			setRelationshipId(relationships[0]?.id || "")
+			setSubgroupId("")
 		}
-	}, [guest, open])
+	}, [guest, open, relationships])
 
 	const handleSubmit = (e: React.FormEvent): void => {
 		e.preventDefault()
 
-		if (!firstName.trim() || !lastName.trim() || !relationship.trim()) {
+		if (!firstName.trim() || !lastName.trim() || !relationshipId) {
 			return
 		}
 
@@ -58,9 +67,13 @@ export function GuestForm({
 			updateGuest(guest.id, {
 				firstName: firstName.trim(),
 				lastName: lastName.trim(),
-				relationship: relationship.trim(),
-				// Note: party size and party name are immutable after creation
+				relationshipId,
 			})
+			
+			// Update party assignment if changed
+			if (guest.subgroupId !== (subgroupId || null)) {
+				updateGuestParty(guest.id, subgroupId || null)
+			}
 		} else {
 			// Add new guest (party name is auto-generated in store)
 			addGuest({
@@ -68,12 +81,33 @@ export function GuestForm({
 				lastName: lastName.trim(),
 				partySize,
 				party: "", // Will be auto-generated in store
-				relationship: relationship.trim(),
+				relationshipId,
 			})
 		}
 
 		onOpenChange(false)
 	}
+
+	const handleAddGuestToParty = () => {
+		if (guest?.subgroupId) {
+			addGuestToParty(guest.subgroupId)
+		}
+	}
+
+	const relationshipItems: ComboboxItem[] = relationships.map((rel) => ({
+		id: rel.id,
+		label: rel.name,
+		description: undefined,
+	}))
+
+	const partyItems: ComboboxItem[] = [
+		{ id: "", label: "No Party (Solo Guest)", description: undefined },
+		...subgroups.map((sg) => ({
+			id: sg.id,
+			label: sg.name,
+			description: `${sg.guestIds.length} members`,
+		})),
+	]
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,35 +145,61 @@ export function GuestForm({
 							/>
 						</div>
 
-						<div className="space-y-2">
-							<Label htmlFor="partySize">Party Size</Label>
-							<Input
-								id="partySize"
-								type="number"
-								min="1"
-								max="20"
-								value={partySize}
-								onChange={(e) => setPartySize(Number.parseInt(e.target.value, 10))}
-								disabled={!!guest}
-								required
-							/>
-							{guest && (
+						{!guest && (
+							<div className="space-y-2">
+								<Label htmlFor="partySize">Party Size</Label>
+								<Input
+									id="partySize"
+									type="number"
+									min="1"
+									max="20"
+									value={partySize}
+									onChange={(e) => setPartySize(Number.parseInt(e.target.value, 10))}
+									required
+								/>
 								<p className="text-xs text-muted-foreground">
-									Party size cannot be changed after creation
+									Number of people in the party (including this guest)
 								</p>
-							)}
-						</div>
+							</div>
+						)}
 
 						<div className="space-y-2">
 							<Label htmlFor="relationship">Relationship</Label>
-							<Input
-								id="relationship"
-								value={relationship}
-								onChange={(e) => setRelationship(e.target.value)}
-								placeholder="Family, Friends, Work, etc."
-								required
+							<Combobox
+								items={relationshipItems}
+								value={relationshipId}
+								onValueChange={setRelationshipId}
+								placeholder="Select relationship..."
+								searchPlaceholder="Search relationships..."
+								emptyMessage="No relationships found. Add one in Settings."
 							/>
 						</div>
+
+						{guest && (
+							<div className="space-y-2">
+								<Label htmlFor="party">Party</Label>
+								<Combobox
+									items={partyItems}
+									value={subgroupId}
+									onValueChange={setSubgroupId}
+									placeholder="Select party..."
+									searchPlaceholder="Search parties..."
+									emptyMessage="No parties found."
+								/>
+								{guest.isMainGuest && guest.subgroupId && (
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={handleAddGuestToParty}
+										className="w-full"
+									>
+										<Plus className="h-4 w-4 mr-2" />
+										Add Guest to This Party
+									</Button>
+								)}
+							</div>
+						)}
 					</div>
 
 					<DialogFooter>

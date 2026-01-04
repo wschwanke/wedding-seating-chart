@@ -51,7 +51,7 @@ function PartyHeader({
 				{...attributes}
 				{...listeners}
 				className={cn(
-					"flex items-center gap-2 w-full text-left text-sm font-medium transition-colors",
+					"flex items-center gap-2 w-full text-left text-sm font-medium transition-colors select-none",
 					"cursor-grab active:cursor-grabbing",
 					isDragging && "opacity-50"
 				)}
@@ -111,8 +111,8 @@ export function GuestSidebar() {
 	const subgroups = useSeatingStore((state) => state.subgroups)
 	const duplicates = useSeatingStore((state) => state.duplicates)
 	const tables = useSeatingStore((state) => state.tables) // Subscribe to trigger re-render on seat changes
-	const relationshipColors = useSeatingStore((state) => state.settings.relationshipColors)
-	const updateRelationshipColor = useSeatingStore((state) => state.updateRelationshipColor)
+	const relationships = useSeatingStore((state) => state.relationships)
+	const updateRelationship = useSeatingStore((state) => state.updateRelationship)
 	const resolveDuplicate = useSeatingStore((state) => state.resolveDuplicate)
 	const getUnassignedGuests = useSeatingStore((state) => state.getUnassignedGuests)
 	const getAssignedGuests = useSeatingStore((state) => state.getAssignedGuests)
@@ -160,8 +160,9 @@ export function GuestSidebar() {
 		setGuestFormOpen(true)
 	}
 
-	// Get unique relationships
-	const uniqueRelationships = Array.from(new Set(guests.map((g) => g.relationship)))
+	// Get unique relationships from guests
+	const uniqueRelationshipIds = Array.from(new Set(guests.map((g) => g.relationshipId)))
+	const uniqueRelationships = relationships.filter((r) => uniqueRelationshipIds.includes(r.id))
 
 	// Helper to organize guests by relationship -> party -> guests hierarchy
 	const organizeGuestsByRelationship = (guestList: Guest[]) => {
@@ -171,9 +172,9 @@ export function GuestSidebar() {
 		}>()
 
 		// Initialize map for each relationship
-		const relationships = Array.from(new Set(guestList.map(g => g.relationship)))
-		relationships.forEach(rel => {
-			relationshipMap.set(rel, {
+		const relationshipIds = Array.from(new Set(guestList.map(g => g.relationshipId)))
+		relationshipIds.forEach(relId => {
+			relationshipMap.set(relId, {
 				parties: new Map(),
 				soloGuests: []
 			})
@@ -181,7 +182,7 @@ export function GuestSidebar() {
 
 		// Organize guests
 		guestList.forEach(guest => {
-			const relData = relationshipMap.get(guest.relationship)
+			const relData = relationshipMap.get(guest.relationshipId)
 			if (!relData) return
 
 			if (guest.subgroupId) {
@@ -211,16 +212,16 @@ export function GuestSidebar() {
 			soloGuestsData: Array<{ guest: Guest; assignment: GuestAssignment }>
 		}>()
 
-		const relationships = Array.from(new Set(assignedGuestsData.map(d => d.guest.relationship)))
-		relationships.forEach(rel => {
-			relationshipMap.set(rel, {
+		const relationshipIds = Array.from(new Set(assignedGuestsData.map(d => d.guest.relationshipId)))
+		relationshipIds.forEach(relId => {
+			relationshipMap.set(relId, {
 				parties: new Map(),
 				soloGuestsData: []
 			})
 		})
 
 		assignedGuestsData.forEach(data => {
-			const relData = relationshipMap.get(data.guest.relationship)
+			const relData = relationshipMap.get(data.guest.relationshipId)
 			if (!relData) return
 
 			if (data.guest.subgroupId) {
@@ -330,21 +331,24 @@ export function GuestSidebar() {
 								) : (
 									<div className="space-y-3">
 										{/* Group by Relationship */}
-										{Array.from(unassignedByRelationship.entries()).map(([relationship, relData]) => {
+										{Array.from(unassignedByRelationship.entries()).map(([relationshipId, relData]) => {
 											const totalGuests = relData.soloGuests.length + 
 												Array.from(relData.parties.values()).reduce((sum, party) => sum + party.guests.length, 0)
 											
 											if (totalGuests === 0) return null
 
-											const isRelExpanded = expandedRelationships.has(relationship)
-											const relationshipColor = relationshipColors.find((rc) => rc.relationship === relationship)?.color || "#888"
+											const relationship = relationships.find(r => r.id === relationshipId)
+											if (!relationship) return null
+
+											const isRelExpanded = expandedRelationships.has(relationshipId)
+											const relationshipColor = relationship.color
 
 											return (
-												<div key={relationship} className="space-y-2">
+												<div key={relationshipId} className="space-y-2">
 													{/* Relationship Header */}
 													<button
 														type="button"
-														onClick={() => toggleRelationship(relationship)}
+														onClick={() => toggleRelationship(relationshipId)}
 														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
 													>
 														{isRelExpanded ? (
@@ -356,7 +360,7 @@ export function GuestSidebar() {
 															className="h-3 w-3 rounded-full border-2" 
 															style={{ backgroundColor: relationshipColor, borderColor: relationshipColor }}
 														/>
-														{relationship}
+														{relationship.name}
 														<span className="text-muted-foreground font-normal">
 															({totalGuests})
 														</span>
@@ -364,9 +368,9 @@ export function GuestSidebar() {
 
 													{isRelExpanded && (
 														<div className="ml-5 space-y-2">
-														{/* Parties within this relationship */}
-														{Array.from(relData.parties.values()).map(({ subgroup, guests: partyGuests }) => {
-															return <PartyHeader 
+															{/* Parties within this relationship */}
+															{Array.from(relData.parties.values()).map(({ subgroup, guests: partyGuests }) => {
+																return <PartyHeader
 																key={subgroup.id}
 																subgroup={subgroup}
 																guests={partyGuests}
@@ -407,21 +411,24 @@ export function GuestSidebar() {
 								) : (
 									<div className="space-y-3">
 										{/* Group by Relationship */}
-										{Array.from(assignedByRelationship.entries()).map(([relationship, relData]) => {
+										{Array.from(assignedByRelationship.entries()).map(([relationshipId, relData]) => {
 											const totalGuests = relData.soloGuestsData.length + 
 												Array.from(relData.parties.values()).reduce((sum, party) => sum + party.guestsData.length, 0)
 											
 											if (totalGuests === 0) return null
 
-											const isRelExpanded = expandedRelationships.has(relationship)
-											const relationshipColor = relationshipColors.find((rc) => rc.relationship === relationship)?.color || "#888"
+											const relationship = relationships.find(r => r.id === relationshipId)
+											if (!relationship) return null
+
+											const isRelExpanded = expandedRelationships.has(relationshipId)
+											const relationshipColor = relationship.color
 
 											return (
-												<div key={relationship} className="space-y-2">
+												<div key={relationshipId} className="space-y-2">
 													{/* Relationship Header */}
 													<button
 														type="button"
-														onClick={() => toggleRelationship(relationship)}
+														onClick={() => toggleRelationship(relationshipId)}
 														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
 													>
 														{isRelExpanded ? (
@@ -433,7 +440,7 @@ export function GuestSidebar() {
 															className="h-3 w-3 rounded-full border-2" 
 															style={{ backgroundColor: relationshipColor, borderColor: relationshipColor }}
 														/>
-														{relationship}
+														{relationship.name}
 														<span className="text-muted-foreground font-normal">
 															({totalGuests})
 														</span>
@@ -489,36 +496,34 @@ export function GuestSidebar() {
 								</p>
 							) : (
 								uniqueRelationships.map((relationship) => {
-									const color =
-										relationshipColors.find((rc) => rc.relationship === relationship)?.color || "#888"
-									const relationshipGuests = guests.filter((g) => g.relationship === relationship)
+									const relationshipGuests = guests.filter((g) => g.relationshipId === relationship.id)
 
 									return (
-										<div key={relationship} className="space-y-2">
+										<div key={relationship.id} className="space-y-2">
 											<div className="flex items-center gap-2">
 												<Popover>
 													<PopoverTrigger asChild>
 														<button
 															type="button"
 															className="h-6 w-6 rounded border-2 cursor-pointer hover:scale-110 transition-transform"
-															style={{ backgroundColor: color }}
+															style={{ backgroundColor: relationship.color }}
 														/>
 													</PopoverTrigger>
 													<PopoverContent className="w-64">
 														<div className="space-y-2">
-															<Label htmlFor={`color-${relationship}`}>Color for "{relationship}"</Label>
+															<Label htmlFor={`color-${relationship.id}`}>Color for "{relationship.name}"</Label>
 															<Input
-																id={`color-${relationship}`}
+																id={`color-${relationship.id}`}
 																type="color"
-																value={color}
+																value={relationship.color}
 																onChange={(e) =>
-																	updateRelationshipColor(relationship, e.target.value)
+																	updateRelationship(relationship.id, { color: e.target.value })
 																}
 															/>
 														</div>
 													</PopoverContent>
 												</Popover>
-												<span className="font-medium">{relationship}</span>
+												<span className="font-medium">{relationship.name}</span>
 												<span className="text-sm text-muted-foreground">
 													({relationshipGuests.length})
 												</span>

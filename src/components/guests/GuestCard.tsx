@@ -16,6 +16,9 @@ interface GuestCardProps {
 
 export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) {
 	const deleteGuest = useSeatingStore((state) => state.deleteGuest)
+	const relationships = useSeatingStore((state) => state.relationships)
+
+	const relationship = relationships.find((r) => r.id === guest.relationshipId)
 
 	const { attributes, listeners, setNodeRef, transform, isDragging } =
 		useDraggable({
@@ -56,7 +59,7 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 			{...listeners}
 			{...attributes}
 			className={cn(
-				"p-3 cursor-grab active:cursor-grabbing border-l-4 transition-shadow hover:shadow-md",
+				"p-3 cursor-grab active:cursor-grabbing border-l-4 transition-shadow hover:shadow-md select-none",
 				isDragging && "opacity-50",
 				assignment && "opacity-70",
 			)}
@@ -73,7 +76,7 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 							{guest.firstName} {guest.lastName}
 						</p>
 					</div>
-					<p className="text-sm text-muted-foreground truncate">{guest.relationship}</p>
+					<p className="text-sm text-muted-foreground truncate">{relationship?.name || "Unknown"}</p>
 					{guest.partySize > 1 && (
 						<p className="text-xs text-muted-foreground">
 							Party of {guest.partySize}

@@ -1,10 +1,16 @@
+export interface Relationship {
+	id: string
+	name: string
+	color: string
+}
+
 export interface Guest {
 	id: string
 	firstName: string
 	lastName: string
 	partySize: number
 	party: string // Auto-generated party name (e.g., "John Smith's Party")
-	relationship: string // User-provided relationship (e.g., "Family", "Friends")
+	relationshipId: string // Reference to Relationship by ID
 	subgroupId?: string
 	isMainGuest: boolean // True if this is the primary person, false if "+1"
 	parentGuestId?: string // For "+1" guests, reference to main guest
@@ -23,15 +29,9 @@ export interface Table {
 	seats: (string | null)[] // Array of guest IDs or null for empty seats
 }
 
-export interface RelationshipColor {
-	relationship: string
-	color: string
-}
-
 export interface Settings {
 	tableCount: number
 	defaultChairCount: number
-	relationshipColors: RelationshipColor[]
 }
 
 export interface DuplicateGuest {
@@ -52,22 +52,34 @@ export interface SeatingStore {
 	guests: Guest[]
 	subgroups: Subgroup[]
 	tables: Table[]
+	relationships: Relationship[]
 	settings: Settings
 	duplicates: DuplicateGuest[]
 
 	// Guest actions
-	addGuest: (guest: Omit<Guest, "id" | "isMainGuest" | "parentGuestId">) => string
+	addGuest: (guest: Omit<Guest, "id" | "isMainGuest" | "parentGuestId" | "party"> & { party?: string }) => string
 	updateGuest: (id: string, updates: Partial<Guest>) => void
 	deleteGuest: (id: string) => void
-	importGuests: (guests: Omit<Guest, "id" | "isMainGuest" | "parentGuestId">[]) => void
+	importGuests: (guests: (Omit<Guest, "id" | "isMainGuest" | "parentGuestId" | "party"> & { party?: string })[]) => void
 	resolveDuplicate: (duplicateId: string, action: "keep" | "remove") => void
 
-	// Subgroup actions
+	// Relationship actions
+	addRelationship: (name: string, color?: string) => string
+	updateRelationship: (id: string, updates: Partial<Omit<Relationship, "id">>) => void
+	deleteRelationship: (id: string) => boolean
+
+	// Subgroup/Party actions
 	createSubgroup: (name: string, guestIds: string[]) => void
 	updateSubgroup: (id: string, name: string) => void
 	deleteSubgroup: (id: string) => void
 	addToSubgroup: (subgroupId: string, guestId: string) => void
 	removeFromSubgroup: (subgroupId: string, guestId: string) => void
+	createParty: (name: string, relationshipId: string) => string
+	deleteParty: (subgroupId: string, deleteGuests: boolean) => void
+	
+	// Guest party management
+	updateGuestParty: (guestId: string, newSubgroupId: string | null) => void
+	addGuestToParty: (subgroupId: string) => string
 
 	// Table actions
 	assignToSeat: (guestId: string, tableId: string, seatIndex: number) => void
@@ -78,7 +90,6 @@ export interface SeatingStore {
 
 	// Settings actions
 	updateSettings: (settings: Partial<Settings>) => void
-	updateRelationshipColor: (relationship: string, color: string) => void
 
 	// Utility actions
 	autoAssign: () => void

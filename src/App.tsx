@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header"
 import { GuestSidebar } from "@/components/sidebar/GuestSidebar"
 import { TableGrid } from "@/components/tables/TableGrid"
 import { GuestCard } from "@/components/guests/GuestCard"
+import { SettingsPage } from "@/components/settings/SettingsPage"
 import { useSeatingStore } from "@/stores/useSeatingStore"
 import type { Guest, Subgroup } from "@/types"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -12,19 +13,20 @@ import { Card } from "@/components/ui/card"
 import { Users } from "lucide-react"
 
 function App() {
+	const [view, setView] = useState<"main" | "settings">("main")
 	const [activeGuest, setActiveGuest] = useState<Guest | null>(null)
 	const [activeParty, setActiveParty] = useState<{ subgroup: Subgroup; guests: Guest[] } | null>(null)
 	const assignToSeat = useSeatingStore((state) => state.assignToSeat)
 	const tables = useSeatingStore((state) => state.tables)
-	const relationshipColors = useSeatingStore((state) => state.settings.relationshipColors)
+	const relationships = useSeatingStore((state) => state.relationships)
 
-	// Configure drag activation - requires 150ms hold before dragging starts
+	// Configure drag activation - 100ms delay + 4px distance tolerance
 	// This allows clicks on buttons to work without triggering drag
 	const sensors = useSensors(
 		useSensor(PointerSensor, {
 			activationConstraint: {
-				delay: 150,
-				tolerance: 5,
+				delay: 100,
+				tolerance: 4,
 			},
 		}),
 	)
@@ -110,9 +112,19 @@ function App() {
 	}
 
 	const getGuestColor = (guest: Guest): string => {
-		return relationshipColors.find((rc) => rc.relationship === guest.relationship)?.color || "#888"
+		return relationships.find((r) => r.id === guest.relationshipId)?.color || "#888"
 	}
 
+	// Show settings page if in settings view
+	if (view === "settings") {
+		return (
+			<TooltipProvider>
+				<SettingsPage onBack={() => setView("main")} />
+			</TooltipProvider>
+		)
+	}
+
+	// Main seating chart view
 	return (
 		<TooltipProvider>
 			<DndContext 
@@ -122,26 +134,26 @@ function App() {
 				onDragEnd={handleDragEnd}
 			>
 				<div className="min-h-screen bg-background text-foreground flex flex-col">
-					<Header />
+					<Header onSettingsClick={() => setView("settings")} />
 					<div className="flex flex-1 overflow-hidden">
 						<GuestSidebar />
 						<TableGrid />
 					</div>
 				</div>
 
-			<DragOverlay>
-				{activeGuest ? (
-					<GuestCard guest={activeGuest} color={getGuestColor(activeGuest)} />
-				) : activeParty ? (
-					<Card className="p-3 border-l-4" style={{ borderLeftColor: getGuestColor(activeParty.guests[0]) }}>
-						<div className="flex items-center gap-2">
-							<Users className="h-4 w-4" />
-							<span className="font-medium">{activeParty.subgroup.name}</span>
-							<span className="text-muted-foreground">({activeParty.guests.length})</span>
-						</div>
-					</Card>
-				) : null}
-			</DragOverlay>
+				<DragOverlay>
+					{activeGuest ? (
+						<GuestCard guest={activeGuest} color={getGuestColor(activeGuest)} />
+					) : activeParty ? (
+						<Card className="p-3 border-l-4" style={{ borderLeftColor: getGuestColor(activeParty.guests[0]) }}>
+							<div className="flex items-center gap-2">
+								<Users className="h-4 w-4" />
+								<span className="font-medium">{activeParty.subgroup.name}</span>
+								<span className="text-muted-foreground">({activeParty.guests.length})</span>
+							</div>
+						</Card>
+					) : null}
+				</DragOverlay>
 			</DndContext>
 		</TooltipProvider>
 	)

@@ -1,12 +1,12 @@
 import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { SettingsDialog } from "@/components/settings/SettingsDialog"
 import { ExportButton } from "@/components/export/ExportButton"
-import { useState } from "react"
 
-export function Header() {
-	const [settingsOpen, setSettingsOpen] = useState(false)
+interface HeaderProps {
+	onSettingsClick: () => void
+}
 
+export function Header({ onSettingsClick }: HeaderProps) {
 	return (
 		<header className="border-b bg-background">
 			<div className="container mx-auto px-4 py-4">
@@ -17,7 +17,7 @@ export function Header() {
 						<Button
 							variant="outline"
 							size="sm"
-							onClick={() => setSettingsOpen(true)}
+							onClick={onSettingsClick}
 						>
 							<Settings className="h-4 w-4 mr-2" />
 							Settings
@@ -25,7 +25,6 @@ export function Header() {
 					</div>
 				</div>
 			</div>
-			<SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 		</header>
 	)
 }

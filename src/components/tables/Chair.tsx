@@ -25,6 +25,9 @@ export function Chair({
 }: ChairProps) {
 	const [popoverOpen, setPopoverOpen] = useState(false)
 	const unassignGuest = useSeatingStore((state) => state.unassignGuest)
+	const relationships = useSeatingStore((state) => state.relationships)
+	
+	const relationship = guest ? relationships.find((r) => r.id === guest.relationshipId) : null
 
 	const { isOver, setNodeRef: setDropRef } = useDroppable({
 		id: `${tableId}-${seatIndex}`,
@@ -125,7 +128,7 @@ export function Chair({
 							<p className="font-medium">
 								{guest.firstName} {guest.lastName}
 							</p>
-							<p className="text-sm text-muted-foreground">{guest.relationship}</p>
+							<p className="text-sm text-muted-foreground">{relationship?.name || "Unknown"}</p>
 							{guest.partySize > 1 && (
 								<p className="text-xs text-muted-foreground">
 									Party of {guest.partySize}

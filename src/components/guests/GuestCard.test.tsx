@@ -10,6 +10,10 @@ vi.mock("@/stores/useSeatingStore", () => ({
 	useSeatingStore: vi.fn((selector) => {
 		const mockState = {
 			deleteGuest: vi.fn(),
+			relationships: [
+				{ id: "rel-family", name: "Family", color: "#ff0000" },
+				{ id: "rel-friends", name: "Friends", color: "#00ff00" },
+			],
 		}
 		return selector ? selector(mockState) : mockState
 	}),
@@ -21,7 +25,8 @@ describe("GuestCard", () => {
 		firstName: "John",
 		lastName: "Smith",
 		partySize: 1,
-		party: "", relationship: "Family",
+		party: "",
+		relationshipId: "rel-family",
 		isMainGuest: true,
 	}
 

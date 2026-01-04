@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import type {
 	Guest,
+	Relationship,
 	Subgroup,
 	Table,
 	Settings,
@@ -14,7 +15,6 @@ import { generateId, generateRandomColor } from "@/lib/utils"
 const DEFAULT_SETTINGS: Settings = {
 	tableCount: 10,
 	defaultChairCount: 10,
-	relationshipColors: [],
 }
 
 const createInitialTables = (count: number, chairCount: number): Table[] => {
@@ -35,6 +35,7 @@ export const useSeatingStore = create<SeatingStore>()(
 				DEFAULT_SETTINGS.tableCount,
 				DEFAULT_SETTINGS.defaultChairCount,
 			),
+			relationships: [],
 			settings: DEFAULT_SETTINGS,
 			duplicates: [],
 
@@ -70,7 +71,7 @@ export const useSeatingStore = create<SeatingStore>()(
 							lastName: `${i}`,
 							partySize: 1,
 							party,
-							relationship: guestData.relationship,
+							relationshipId: guestData.relationshipId,
 							subgroupId,
 							isMainGuest: false,
 							parentGuestId: id,
@@ -99,11 +100,6 @@ export const useSeatingStore = create<SeatingStore>()(
 					})
 				}
 
-				// Auto-assign color to new relationship if it doesn't exist
-				if (!state.settings.relationshipColors.find((rc) => rc.relationship === guestData.relationship)) {
-					get().updateRelationshipColor(guestData.relationship, generateRandomColor())
-				}
-
 				return id
 			},
 
@@ -113,6 +109,42 @@ export const useSeatingStore = create<SeatingStore>()(
 						g.id === id ? { ...g, ...updates } : g,
 					),
 				})
+			},
+
+			// Relationship actions
+			addRelationship: (name, color) => {
+				const state = get()
+				const id = generateId()
+				const newRelationship: Relationship = {
+					id,
+					name,
+					color: color || generateRandomColor(),
+				}
+				set({
+					relationships: [...state.relationships, newRelationship],
+				})
+				return id
+			},
+
+			updateRelationship: (id, updates) => {
+				set({
+					relationships: get().relationships.map((r) =>
+						r.id === id ? { ...r, ...updates } : r,
+					),
+				})
+			},
+
+			deleteRelationship: (id) => {
+				const state = get()
+				// Check if any guests use this relationship
+				const hasGuests = state.guests.some((g) => g.relationshipId === id)
+				if (hasGuests) {
+					return false
+				}
+				set({
+					relationships: state.relationships.filter((r) => r.id !== id),
+				})
+				return true
 			},
 
 			deleteGuest: (id) => {
@@ -169,11 +201,12 @@ export const useSeatingStore = create<SeatingStore>()(
 					)
 
 					if (existingGuest) {
+						const relationship = state.relationships.find((r) => r.id === guestData.relationshipId)
 						newDuplicates.push({
 							id: generateId(),
 							firstName: guestData.firstName,
 							lastName: guestData.lastName,
-							relationship: guestData.relationship,
+							relationship: relationship?.name || "",
 						})
 						// Still import but mark as duplicate
 					}
@@ -206,7 +239,7 @@ export const useSeatingStore = create<SeatingStore>()(
 								lastName: `${i}`,
 								partySize: 1,
 								party,
-								relationship: guestData.relationship,
+								relationshipId: guestData.relationshipId,
 								subgroupId,
 								isMainGuest: false,
 								parentGuestId: id,
@@ -225,11 +258,6 @@ export const useSeatingStore = create<SeatingStore>()(
 						// Update main guest with subgroup
 						mainGuest.subgroupId = subgroupId
 					}
-
-					// Auto-assign color to new relationship if it doesn't exist
-					if (!state.settings.relationshipColors.find((rc) => rc.relationship === guestData.relationship)) {
-						state.updateRelationshipColor(guestData.relationship, generateRandomColor())
-					}
 				}
 
 				set({
@@ -247,12 +275,14 @@ export const useSeatingStore = create<SeatingStore>()(
 
 				if (action === "remove") {
 					// Find and remove the duplicate guest
-					const guestToRemove = state.guests.find(
-						(g) =>
+					const guestToRemove = state.guests.find((g) => {
+						const relationship = state.relationships.find((r) => r.id === g.relationshipId)
+						return (
 							g.firstName === duplicate.firstName &&
 							g.lastName === duplicate.lastName &&
-							g.relationship === duplicate.relationship,
-					)
+							relationship?.name === duplicate.relationship
+						)
+					})
 
 					if (guestToRemove) {
 						get().deleteGuest(guestToRemove.id)
@@ -346,6 +376,144 @@ export const useSeatingStore = create<SeatingStore>()(
 					subgroups: updatedSubgroups,
 					guests: updatedGuests,
 				})
+			},
+
+			createParty: (name, _relationshipId) => {
+				const state = get()
+				const id = generateId()
+				const newSubgroup: Subgroup = {
+					id,
+					name,
+					guestIds: [],
+				}
+				set({
+					subgroups: [...state.subgroups, newSubgroup],
+				})
+				return id
+			},
+
+			deleteParty: (subgroupId, deleteGuests) => {
+				const state = get()
+				const subgroup = state.subgroups.find((sg) => sg.id === subgroupId)
+				if (!subgroup) return
+
+				if (deleteGuests) {
+					// Delete all guests in the party
+					const guestIdsToRemove = new Set(subgroup.guestIds)
+					
+					// Remove from tables
+					const updatedTables = state.tables.map((table) => ({
+						...table,
+						seats: table.seats.map((seat) =>
+							guestIdsToRemove.has(seat ?? "") ? null : seat,
+						),
+					}))
+
+					set({
+						guests: state.guests.filter((g) => !guestIdsToRemove.has(g.id)),
+						subgroups: state.subgroups.filter((sg) => sg.id !== subgroupId),
+						tables: updatedTables,
+					})
+				} else {
+					// Make guests solo
+					const updatedGuests = state.guests.map((g) =>
+						g.subgroupId === subgroupId
+							? { ...g, subgroupId: undefined, party: "" }
+							: g,
+					)
+					set({
+						guests: updatedGuests,
+						subgroups: state.subgroups.filter((sg) => sg.id !== subgroupId),
+					})
+				}
+			},
+
+			updateGuestParty: (guestId, newSubgroupId) => {
+				const state = get()
+				const guest = state.guests.find((g) => g.id === guestId)
+				if (!guest) return
+
+				// Remove from current subgroup if exists
+				let updatedSubgroups = state.subgroups
+				if (guest.subgroupId) {
+					updatedSubgroups = updatedSubgroups
+						.map((sg) =>
+							sg.id === guest.subgroupId
+								? { ...sg, guestIds: sg.guestIds.filter((id) => id !== guestId) }
+								: sg,
+						)
+						.filter((sg) => sg.guestIds.length > 0)
+				}
+
+				// Add to new subgroup if provided
+				if (newSubgroupId) {
+					updatedSubgroups = updatedSubgroups.map((sg) =>
+						sg.id === newSubgroupId
+							? { ...sg, guestIds: [...sg.guestIds, guestId] }
+							: sg,
+					)
+					const newSubgroup = state.subgroups.find((sg) => sg.id === newSubgroupId)
+					const newParty = newSubgroup?.name || ""
+					
+					set({
+						guests: state.guests.map((g) =>
+							g.id === guestId
+								? { ...g, subgroupId: newSubgroupId, party: newParty }
+								: g,
+						),
+						subgroups: updatedSubgroups,
+					})
+				} else {
+					// Make solo
+					set({
+						guests: state.guests.map((g) =>
+							g.id === guestId
+								? { ...g, subgroupId: undefined, party: "" }
+								: g,
+						),
+						subgroups: updatedSubgroups,
+					})
+				}
+			},
+
+			addGuestToParty: (subgroupId) => {
+				const state = get()
+				const subgroup = state.subgroups.find((sg) => sg.id === subgroupId)
+				if (!subgroup) return ""
+
+				// Find the main guest to get relationship
+				const mainGuest = state.guests.find(
+					(g) => g.subgroupId === subgroupId && g.isMainGuest,
+				)
+				if (!mainGuest) return ""
+
+				// Count existing party members to generate appropriate name
+				const partyMembers = state.guests.filter((g) => g.subgroupId === subgroupId)
+				const guestNumber = partyMembers.filter((g) => !g.isMainGuest).length + 1
+
+				const newGuestId = generateId()
+				const newGuest: Guest = {
+					id: newGuestId,
+					firstName: `${mainGuest.firstName} ${mainGuest.lastName}'s Guest`,
+					lastName: `${guestNumber}`,
+					partySize: 1,
+					party: subgroup.name,
+					relationshipId: mainGuest.relationshipId,
+					subgroupId,
+					isMainGuest: false,
+					parentGuestId: mainGuest.id,
+				}
+
+				set({
+					guests: [...state.guests, newGuest],
+					subgroups: state.subgroups.map((sg) =>
+						sg.id === subgroupId
+							? { ...sg, guestIds: [...sg.guestIds, newGuestId] }
+							: sg,
+					),
+				})
+
+				return newGuestId
 			},
 
 			// Table actions
@@ -481,28 +649,6 @@ export const useSeatingStore = create<SeatingStore>()(
 				}
 			},
 
-			updateRelationshipColor: (relationship, color) => {
-				const state = get()
-				const existingColorIndex = state.settings.relationshipColors.findIndex(
-					(rc) => rc.relationship === relationship,
-				)
-
-				if (existingColorIndex !== -1) {
-					const updatedColors = [...state.settings.relationshipColors]
-					updatedColors[existingColorIndex] = { relationship, color }
-					set({
-						settings: { ...state.settings, relationshipColors: updatedColors },
-					})
-				} else {
-					set({
-						settings: {
-							...state.settings,
-							relationshipColors: [...state.settings.relationshipColors, { relationship, color }],
-						},
-					})
-				}
-			},
-
 			// Utility actions
 			autoAssign: () => {
 				// Implementation in auto-assign.ts
@@ -524,6 +670,7 @@ export const useSeatingStore = create<SeatingStore>()(
 						DEFAULT_SETTINGS.tableCount,
 						DEFAULT_SETTINGS.defaultChairCount,
 					),
+					relationships: [],
 					settings: DEFAULT_SETTINGS,
 					duplicates: [],
 				})
@@ -598,6 +745,67 @@ export const useSeatingStore = create<SeatingStore>()(
 		}),
 		{
 			name: "seating-chart-storage",
+			version: 2,
+			migrate: (persistedState: any, version: number) => {
+				// Migration from version 0 or 1 to version 2
+				if (version < 2) {
+					const oldState = persistedState as any
+					
+					// Create relationships from old relationshipColors
+					const relationshipMap = new Map<string, string>() // name -> id
+					const relationships: Relationship[] = []
+					
+					// Get unique relationships from settings if they exist
+					if (oldState.settings?.relationshipColors) {
+						for (const rc of oldState.settings.relationshipColors) {
+							const id = generateId()
+							relationshipMap.set(rc.relationship, id)
+							relationships.push({ 
+								id, 
+								name: rc.relationship, 
+								color: rc.color 
+							})
+						}
+					}
+					
+					// Also get unique relationships from guests (in case some weren't in settings)
+					if (oldState.guests) {
+						for (const guest of oldState.guests) {
+							if (guest.relationship && !relationshipMap.has(guest.relationship)) {
+								const id = generateId()
+								relationshipMap.set(guest.relationship, id)
+								relationships.push({ 
+									id, 
+									name: guest.relationship, 
+									color: generateRandomColor() 
+								})
+							}
+						}
+					}
+					
+					// Migrate guests to use relationshipId
+					const migratedGuests = oldState.guests?.map((guest: any) => {
+						const relationshipId = relationshipMap.get(guest.relationship) || ""
+						const { relationship, ...rest } = guest
+						return {
+							...rest,
+							relationshipId,
+						}
+					}) || []
+					
+					// Return migrated state
+					return {
+						...oldState,
+						guests: migratedGuests,
+						relationships,
+						settings: {
+							tableCount: oldState.settings?.tableCount || DEFAULT_SETTINGS.tableCount,
+							defaultChairCount: oldState.settings?.defaultChairCount || DEFAULT_SETTINGS.defaultChairCount,
+						},
+					}
+				}
+				return persistedState
+			},
 		},
 	),
 )

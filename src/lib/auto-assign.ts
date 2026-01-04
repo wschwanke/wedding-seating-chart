@@ -1,9 +1,8 @@
 import type { Guest, Table, Subgroup } from "@/types"
 
 interface RelationshipWithGuests {
-	relationship: string
+	relationshipId: string
 	guests: Guest[]
-	totalSeats: number
 }
 
 /**
@@ -20,21 +19,21 @@ export function autoAssignGuests(
 		seats: Array(table.chairCount).fill(null),
 	}))
 
-	// Group guests by their relationship
+	// Group guests by their relationshipId
 	const relationshipMap = new Map<string, Guest[]>()
 
 	for (const guest of guests) {
-		const relationship = guest.relationship
-		if (!relationshipMap.has(relationship)) {
-			relationshipMap.set(relationship, [])
+		const relationshipId = guest.relationshipId
+		if (!relationshipMap.has(relationshipId)) {
+			relationshipMap.set(relationshipId, [])
 		}
-		relationshipMap.get(relationship)!.push(guest)
+		relationshipMap.get(relationshipId)!.push(guest)
 	}
 
 	// Convert to sorted array (largest relationship groups first)
 	const relationshipsWithGuests: RelationshipWithGuests[] = Array.from(relationshipMap.entries())
-		.map(([relationship, guestsInRelationship]) => ({
-			relationship,
+		.map(([relationshipId, guestsInRelationship]) => ({
+			relationshipId,
 			guests: guestsInRelationship,
 			totalSeats: guestsInRelationship.reduce((sum, g) => sum + g.partySize, 0),
 		}))

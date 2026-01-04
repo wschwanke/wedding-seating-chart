@@ -16,7 +16,7 @@ interface CircularTableProps {
 
 export function CircularTable({ table }: CircularTableProps) {
 	const guests = useSeatingStore((state) => state.guests)
-	const relationshipColors = useSeatingStore((state) => state.settings.relationshipColors)
+	const relationships = useSeatingStore((state) => state.relationships)
 	const updateTableName = useSeatingStore((state) => state.updateTableName)
 	const updateTableChairCount = useSeatingStore(
 		(state) => state.updateTableChairCount,
@@ -45,7 +45,7 @@ export function CircularTable({ table }: CircularTableProps) {
 		if (!guestId) return undefined
 		const guest = guests.find((g) => g.id === guestId)
 		if (!guest) return undefined
-		return relationshipColors.find((rc) => rc.relationship === guest.relationship)?.color
+		return relationships.find((r) => r.id === guest.relationshipId)?.color
 	}
 
 	// Calculate chair positions in a circle

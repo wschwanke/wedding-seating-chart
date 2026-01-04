@@ -13,12 +13,18 @@ Jane,Doe,1,Friends`
 		expect(result.success).toBe(true)
 		expect(result.guests).toHaveLength(2)
 		expect(result.errors).toHaveLength(0)
+		expect(result.relationships).toHaveLength(2)
 
 		expect(result.guests[0].firstName).toBe("John")
 		expect(result.guests[0].lastName).toBe("Smith")
 		expect(result.guests[0].partySize).toBe(2)
-		expect(result.guests[0].relationship).toBe("Family")
+		expect(result.guests[0].relationshipId).toBeDefined()
 		expect(result.guests[0].party).toBe("John Smith's Party")
+		
+		// Check relationships were created
+		const familyRel = result.relationships.find((r) => r.name === "Family")
+		expect(familyRel).toBeDefined()
+		expect(result.guests[0].relationshipId).toBe(familyRel?.id)
 	})
 
 	it("should handle case-insensitive headers", async () => {
@@ -42,7 +48,9 @@ John,Smith,1,Family`
 		expect(result.success).toBe(true)
 		expect(result.guests[0].firstName).toBe("John")
 		expect(result.guests[0].lastName).toBe("Smith")
-		expect(result.guests[0].relationship).toBe("Family")
+		expect(result.guests[0].relationshipId).toBeDefined()
+		expect(result.relationships).toHaveLength(1)
+		expect(result.relationships[0].name).toBe("Family")
 	})
 
 	it("should reject CSV with missing headers", async () => {

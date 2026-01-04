@@ -5,7 +5,7 @@ import type { Guest, Table, Subgroup } from "@/types"
 function createGuest(
 	id: string,
 	firstName: string,
-	relationship: string,
+	relationshipId: string,
 	partySize = 1,
 	subgroupId?: string,
 ): Guest {
@@ -15,7 +15,7 @@ function createGuest(
 		lastName: "Test",
 		partySize,
 		party: partySize > 1 ? `${firstName}'s Party` : "",
-		relationship,
+		relationshipId,
 		isMainGuest: true,
 		subgroupId,
 	}
@@ -63,13 +63,13 @@ describe("Auto-Assign Algorithm", () => {
 		const table1FamilyCount = result[0].seats.filter((seat) => {
 			if (!seat) return false
 			const guest = guests.find((g) => g.id === seat)
-			return guest?.relationship === "Family"
+			return guest?.relationshipId === "Family"
 		}).length
 
 		const table2FamilyCount = result[1].seats.filter((seat) => {
 			if (!seat) return false
 			const guest = guests.find((g) => g.id === seat)
-			return guest?.relationship === "Family"
+			return guest?.relationshipId === "Family"
 		}).length
 
 		// All 3 family members should be at one table
@@ -152,13 +152,13 @@ describe("Auto-Assign Algorithm", () => {
 		const table1LargeCount = result[0].seats.filter((seat) => {
 			if (!seat) return false
 			const guest = guests.find((g) => g.id === seat)
-			return guest?.relationship === "Large"
+			return guest?.relationshipId === "Large"
 		}).length
 
 		const table2LargeCount = result[1].seats.filter((seat) => {
 			if (!seat) return false
 			const guest = guests.find((g) => g.id === seat)
-			return guest?.relationship === "Large"
+			return guest?.relationshipId === "Large"
 		}).length
 
 		// Large group members should be mostly at the same table

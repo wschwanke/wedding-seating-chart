@@ -14,6 +14,8 @@ import {
 export function CsvImport() {
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const importGuests = useSeatingStore((state) => state.importGuests)
+	const relationships = useSeatingStore((state) => state.relationships)
+	const addRelationship = useSeatingStore((state) => state.addRelationship)
 	const [errorDialog, setErrorDialog] = useState<{
 		open: boolean
 		errors: string[]
@@ -32,7 +34,25 @@ export function CsvImport() {
 			return
 		}
 
-		importGuests(result.guests)
+		// Add new relationships that don't exist
+		const relationshipIdMap = new Map<string, string>() // old ID -> new ID
+		for (const relationship of result.relationships) {
+			const existing = relationships.find((r) => r.name === relationship.name)
+			if (existing) {
+				relationshipIdMap.set(relationship.id, existing.id)
+			} else {
+				const newId = addRelationship(relationship.name, relationship.color)
+				relationshipIdMap.set(relationship.id, newId)
+			}
+		}
+
+		// Update guest relationshipIds to match store IDs
+		const updatedGuests = result.guests.map((guest) => ({
+			...guest,
+			relationshipId: relationshipIdMap.get(guest.relationshipId) || guest.relationshipId,
+		}))
+
+		importGuests(updatedGuests)
 
 		// Reset file input
 		if (fileInputRef.current) {
