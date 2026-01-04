@@ -142,25 +142,22 @@ function App() {
         return;
       }
 
-      // Try to assign party members consecutively from drop seat
-      let currentSeat = seatIndex;
-      for (const guest of guests) {
-        // Find next available seat from currentSeat onward
-        while (
-          currentSeat < table.seats.length &&
-          table.seats[currentSeat] !== null
-        ) {
-          currentSeat++;
-        }
-
-        if (currentSeat < table.seats.length) {
-          assignToSeat(guest.id, tableId, currentSeat);
-          currentSeat++;
-        } else {
-          // No more seats, leave remaining guests unassigned
-          break;
+      // Collect empty seats starting from drop position, wrapping around
+      const emptySeats: number[] = [];
+      for (let i = 0; i < table.seats.length; i++) {
+        const seatIdx = (seatIndex + i) % table.seats.length;
+        if (table.seats[seatIdx] === null) {
+          emptySeats.push(seatIdx);
         }
       }
+
+      // Assign guests to available seats
+      guests.forEach((guest, idx) => {
+        if (idx < emptySeats.length) {
+          assignToSeat(guest.id, tableId, emptySeats[idx]);
+        }
+        // Remaining guests left unassigned if not enough seats
+      });
 
       return;
     }
