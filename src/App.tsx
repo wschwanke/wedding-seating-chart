@@ -1,193 +1,226 @@
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core"
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
-import { useState, useCallback } from "react"
-import { Header } from "@/components/layout/Header"
-import { GuestSidebar } from "@/components/sidebar/GuestSidebar"
-import { TableGrid } from "@/components/tables/TableGrid"
-import { GuestCard } from "@/components/guests/GuestCard"
-import { SettingsPage } from "@/components/settings/SettingsPage"
-import { useSeatingStore } from "@/stores/useSeatingStore"
-import type { Guest, Subgroup } from "@/types"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { Card } from "@/components/ui/card"
-import { Users } from "lucide-react"
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import { useState, useCallback } from "react";
+import { Header } from "@/components/layout/Header";
+import { GuestSidebar } from "@/components/sidebar/GuestSidebar";
+import { TableGrid } from "@/components/tables/TableGrid";
+import { GuestCard } from "@/components/guests/GuestCard";
+import { SettingsPage } from "@/components/settings/SettingsPage";
+import { useSeatingStore } from "@/stores/useSeatingStore";
+import type { Guest, Subgroup } from "@/types";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Card } from "@/components/ui/card";
+import { Users } from "lucide-react";
 
 interface ChairDragOverlayProps {
-	guest: Guest
-	color: string
+  guest: Guest;
+  color: string;
 }
 
 function ChairDragOverlay({ guest, color }: ChairDragOverlayProps) {
-	return (
-		<div
-			className="w-16 h-16 rounded-full border-2 flex items-center justify-center text-xs font-medium shadow-lg"
-			style={{
-				backgroundColor: color ? `${color}20` : '#f5f5f5',
-				borderColor: color || '#888',
-			}}
-		>
-			<div className="text-center">
-				<div className="text-sm font-bold">
-					{guest.firstName.charAt(0).toUpperCase()}{guest.lastName.charAt(0).toUpperCase()}
-				</div>
-			</div>
-		</div>
-	)
+  return (
+    <div
+      className="w-16 h-16 rounded-full border-2 flex items-center justify-center text-xs font-medium shadow-lg"
+      style={{
+        backgroundColor: color ? `${color}20` : "#f5f5f5",
+        borderColor: color || "#888",
+      }}
+    >
+      <div className="text-center">
+        <div className="text-sm font-bold">
+          {guest.firstName.charAt(0).toUpperCase()}
+          {guest.lastName.charAt(0).toUpperCase()}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function App() {
-	const [view, setView] = useState<"main" | "settings">("main")
-	const [activeGuest, setActiveGuest] = useState<Guest | null>(null)
-	const [activeParty, setActiveParty] = useState<{ subgroup: Subgroup; guests: Guest[] } | null>(null)
-	const [dragSource, setDragSource] = useState<'chair' | 'sidebar' | null>(null)
-	const assignToSeat = useSeatingStore((state) => state.assignToSeat)
-	const tables = useSeatingStore((state) => state.tables)
-	const relationships = useSeatingStore((state) => state.relationships)
+  const [view, setView] = useState<"main" | "settings">("main");
+  const [activeGuest, setActiveGuest] = useState<Guest | null>(null);
+  const [activeParty, setActiveParty] = useState<{
+    subgroup: Subgroup;
+    guests: Guest[];
+  } | null>(null);
+  const [dragSource, setDragSource] = useState<"chair" | "sidebar" | null>(
+    null,
+  );
+  const assignToSeat = useSeatingStore((state) => state.assignToSeat);
+  const tables = useSeatingStore((state) => state.tables);
+  const relationships = useSeatingStore((state) => state.relationships);
 
-	// Configure drag activation - 5px distance tolerance
-	// This allows clicks on buttons to work without triggering drag
-	const sensors = useSensors(
-		useSensor(PointerSensor, {
-			activationConstraint: {
-				distance: 5,
-			},
-		}),
-	)
+  // Configure drag activation - either hold 200ms OR move 5px
+  // This allows clicks on buttons to work without triggering drag
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        delay: 100,     // Hold 200ms to trigger drag without moving
+        tolerance: 2, // OR move 5px to trigger drag immediately
+      },
+    }),
+  );
 
-	const handleDragStart = (event: DragStartEvent): void => {
-		const activeData = event.active.data.current
-		const activeId = String(event.active.id)
-		
-		// Determine drag source
-		const isFromChair = activeId.startsWith('chair-')
-		setDragSource(isFromChair ? 'chair' : 'sidebar')
-		
-		if (activeData?.type === 'party') {
-			setActiveParty({ 
-				subgroup: activeData.subgroup as Subgroup, 
-				guests: activeData.guests as Guest[] 
-			})
-			setActiveGuest(null)
-		} else {
-			const guest = activeData?.guest as Guest | undefined
-			if (guest) {
-				setActiveGuest(guest)
-				setActiveParty(null)
-			}
-		}
-	}
+  const handleDragStart = (event: DragStartEvent): void => {
+    const activeData = event.active.data.current;
+    const activeId = String(event.active.id);
 
-	const handleDragEnd = (event: DragEndEvent): void => {
-		const { active, over } = event
+    // Determine drag source
+    const isFromChair = activeId.startsWith("chair-");
+    setDragSource(isFromChair ? "chair" : "sidebar");
 
-		setActiveGuest(null)
-		setActiveParty(null)
-		setDragSource(null)
+    if (activeData?.type === "party") {
+      setActiveParty({
+        subgroup: activeData.subgroup as Subgroup,
+        guests: activeData.guests as Guest[],
+      });
+      setActiveGuest(null);
+    } else {
+      const guest = activeData?.guest as Guest | undefined;
+      if (guest) {
+        setActiveGuest(guest);
+        setActiveParty(null);
+      }
+    }
+  };
 
-		if (!over) return
+  const handleDragEnd = (event: DragEndEvent): void => {
+    const { active, over } = event;
 
-		const activeData = active.data.current
-		const dropData = over.data.current as { tableId: string; seatIndex: number } | undefined
+    setActiveGuest(null);
+    setActiveParty(null);
+    setDragSource(null);
 
-		if (!dropData) return
+    if (!over) return;
 
-		// Handle party drag
-		if (activeData?.type === 'party') {
-			const { guests } = activeData as { guests: Guest[] }
-			const { tableId, seatIndex } = dropData
+    const activeData = active.data.current;
+    const dropData = over.data.current as
+      | { tableId: string; seatIndex: number }
+      | undefined;
 
-			// Find the table
-			const table = tables.find(t => t.id === tableId)
-			if (!table) return
+    if (!dropData) return;
 
-			// Check if drop seat is empty
-			if (table.seats[seatIndex] !== null) {
-				// Cannot drop on occupied seat
-				return
-			}
+    // Handle party drag
+    if (activeData?.type === "party") {
+      const { guests } = activeData as { guests: Guest[] };
+      const { tableId, seatIndex } = dropData;
 
-			// Try to assign party members consecutively from drop seat
-			let currentSeat = seatIndex
-			for (const guest of guests) {
-				// Find next available seat from currentSeat onward
-				while (currentSeat < table.seats.length && table.seats[currentSeat] !== null) {
-					currentSeat++
-				}
+      // Find the table
+      const table = tables.find((t) => t.id === tableId);
+      if (!table) return;
 
-				if (currentSeat < table.seats.length) {
-					assignToSeat(guest.id, tableId, currentSeat)
-					currentSeat++
-				} else {
-					// No more seats, leave remaining guests unassigned
-					break
-				}
-			}
+      // Check if drop seat is empty
+      if (table.seats[seatIndex] !== null) {
+        // Cannot drop on occupied seat
+        return;
+      }
 
-			return
-		}
+      // Try to assign party members consecutively from drop seat
+      let currentSeat = seatIndex;
+      for (const guest of guests) {
+        // Find next available seat from currentSeat onward
+        while (
+          currentSeat < table.seats.length &&
+          table.seats[currentSeat] !== null
+        ) {
+          currentSeat++;
+        }
 
-		// Handle single guest drag (existing logic)
-		const guest = activeData?.guest as Guest | undefined
-		if (!guest) return
+        if (currentSeat < table.seats.length) {
+          assignToSeat(guest.id, tableId, currentSeat);
+          currentSeat++;
+        } else {
+          // No more seats, leave remaining guests unassigned
+          break;
+        }
+      }
 
-		// Check if drop seat is empty
-		const table = tables.find(t => t.id === dropData.tableId)
-		if (table && table.seats[dropData.seatIndex] !== null) {
-			// Cannot drop on occupied seat
-			return
-		}
+      return;
+    }
 
-		assignToSeat(guest.id, dropData.tableId, dropData.seatIndex)
-	}
+    // Handle single guest drag (existing logic)
+    const guest = activeData?.guest as Guest | undefined;
+    if (!guest) return;
 
-	const getGuestColor = useCallback((guest: Guest): string => {
-		return relationships.find((r) => r.id === guest.relationshipId)?.color || "#888"
-	}, [relationships])
+    // Check if drop seat is empty
+    const table = tables.find((t) => t.id === dropData.tableId);
+    if (table && table.seats[dropData.seatIndex] !== null) {
+      // Cannot drop on occupied seat
+      return;
+    }
 
-	// Show settings page if in settings view
-	if (view === "settings") {
-		return (
-			<TooltipProvider>
-				<SettingsPage onBack={() => setView("main")} />
-			</TooltipProvider>
-		)
-	}
+    assignToSeat(guest.id, dropData.tableId, dropData.seatIndex);
+  };
 
-	// Main seating chart view
-	return (
-		<TooltipProvider>
-			<DndContext 
-				sensors={sensors} 
-				collisionDetection={closestCenter}
-				onDragStart={handleDragStart} 
-				onDragEnd={handleDragEnd}
-			>
-				<div className="min-h-screen bg-background text-foreground flex flex-col">
-					<Header onSettingsClick={() => setView("settings")} />
-					<div className="flex flex-1 overflow-hidden">
-						<GuestSidebar />
-						<TableGrid />
-					</div>
-				</div>
+  const getGuestColor = useCallback(
+    (guest: Guest): string => {
+      return (
+        relationships.find((r) => r.id === guest.relationshipId)?.color ||
+        "#888"
+      );
+    },
+    [relationships],
+  );
 
-				<DragOverlay>
-					{activeGuest && dragSource === 'chair' ? (
-						<ChairDragOverlay guest={activeGuest} color={getGuestColor(activeGuest)} />
-					) : activeGuest ? (
-						<GuestCard guest={activeGuest} color={getGuestColor(activeGuest)} />
-					) : activeParty ? (
-						<Card className="p-3 border-l-4" style={{ borderLeftColor: getGuestColor(activeParty.guests[0]) }}>
-							<div className="flex items-center gap-2">
-								<Users className="h-4 w-4" />
-								<span className="font-medium">{activeParty.subgroup.name}</span>
-								<span className="text-muted-foreground">({activeParty.guests.length})</span>
-							</div>
-						</Card>
-					) : null}
-				</DragOverlay>
-			</DndContext>
-		</TooltipProvider>
-	)
+  // Show settings page if in settings view
+  if (view === "settings") {
+    return (
+      <TooltipProvider>
+        <SettingsPage onBack={() => setView("main")} />
+      </TooltipProvider>
+    );
+  }
+
+  // Main seating chart view
+  return (
+    <TooltipProvider>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="min-h-screen bg-background text-foreground flex flex-col">
+          <Header onSettingsClick={() => setView("settings")} />
+          <div className="flex flex-1 overflow-hidden">
+            <GuestSidebar />
+            <TableGrid />
+          </div>
+        </div>
+
+        <DragOverlay>
+          {activeGuest && dragSource === "chair" ? (
+            <ChairDragOverlay
+              guest={activeGuest}
+              color={getGuestColor(activeGuest)}
+            />
+          ) : activeGuest ? (
+            <GuestCard guest={activeGuest} color={getGuestColor(activeGuest)} />
+          ) : activeParty ? (
+            <Card
+              className="p-3 border-l-4"
+              style={{ borderLeftColor: getGuestColor(activeParty.guests[0]) }}
+            >
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                <span className="font-medium">{activeParty.subgroup.name}</span>
+                <span className="text-muted-foreground">
+                  ({activeParty.guests.length})
+                </span>
+              </div>
+            </Card>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </TooltipProvider>
+  );
 }
 
-export default App
+export default App;

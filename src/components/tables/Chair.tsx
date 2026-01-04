@@ -73,7 +73,7 @@ export const Chair = memo(function Chair({
 			>
 			<div
 				className={cn(
-					"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
+					"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-[transform,box-shadow,border-color]",
 					"bg-muted/50 border-border",
 					isOver && "ring-2 ring-primary ring-offset-2 scale-110",
 				)}
@@ -108,17 +108,17 @@ export const Chair = memo(function Chair({
 								setPopoverOpen(true)
 							}
 						}}
-						className={cn(
-							"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
-							"bg-background border-primary shadow-md cursor-pointer hover:scale-105",
-							isOver && "ring-2 ring-primary ring-offset-2 scale-110",
-							isDragging && "opacity-30",
-						)}
-						style={{
-							backgroundColor: color ? `${color}20` : undefined,
-							borderColor: color || undefined,
-							...(transform && { transform: CSS.Translate.toString(transform) }),
-						}}
+					className={cn(
+						"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-[transform,box-shadow,border-color]",
+						"bg-background border-primary shadow-md cursor-pointer hover:scale-105",
+						isOver && "ring-2 ring-primary ring-offset-2 scale-110",
+						isDragging && "opacity-30",
+					)}
+					style={{
+						backgroundColor: color ? `${color}20` : undefined,
+						borderColor: color || undefined,
+						...(transform && !isDragging && { transform: CSS.Translate.toString(transform) }),
+					}}
 					>
 						<div className="text-center overflow-hidden pointer-events-none">
 							<div className="text-xs font-bold">
