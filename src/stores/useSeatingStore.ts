@@ -11,6 +11,7 @@ import type {
 	GuestAssignment,
 } from "@/types"
 import { generateId, generateRandomColor } from "@/lib/utils"
+import { autoAssignGuests } from "@/lib/auto-assign"
 
 const DEFAULT_SETTINGS: Settings = {
 	tableCount: 10,
@@ -697,18 +698,16 @@ export const useSeatingStore = create<SeatingStore>()(
 				}
 			},
 
-			// Utility actions
-			autoAssign: () => {
-				// Implementation in auto-assign.ts
-				const state = get()
-				const { autoAssignGuests } = require("@/lib/auto-assign")
-				const updatedTables = autoAssignGuests(
-					state.guests,
-					state.tables,
-					state.subgroups,
-				)
-				set({ tables: updatedTables })
-			},
+		// Utility actions
+		autoAssign: () => {
+			const state = get()
+			const updatedTables = autoAssignGuests(
+				state.guests,
+				state.tables,
+				state.subgroups,
+			)
+			set({ tables: updatedTables })
+		},
 
 		clearAll: () => {
 			set({

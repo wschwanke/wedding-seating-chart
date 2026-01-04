@@ -64,7 +64,6 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 		const MIN_SPACING = CHAIR_SIZE + MIN_GAP // 64px arc per chair
 		const BASE_RADIUS = 100
 		const BASE_CONTAINER = 300
-		const BASE_TABLE_CENTER = 130
 		const MAX_CONTAINER = 500 // Maximum container size
 
 		// Calculate minimum radius needed to fit all chairs without overlap
@@ -83,8 +82,10 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 		const centerX = containerSize / 2
 		const centerY = containerSize / 2
 
-		// Scale table center proportionally
-		const tableCenterSize = Math.max(BASE_TABLE_CENTER, effectiveRadius * 0.65)
+		// Scale table center based on container size and chair count for better visibility
+		// Starts at 35% of container for small tables, grows to 50% for larger tables
+		const baseScale = 0.35 + (Math.min(table.chairCount, 30) / 30) * 0.15
+		const tableCenterSize = containerSize * baseScale
 
 		return { containerSize, effectiveRadius, centerX, centerY, tableCenterSize }
 	}, [table.chairCount])

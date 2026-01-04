@@ -140,4 +140,89 @@ describe("CircularTable", () => {
 
 		expect(screen.getByText(/Over capacity!/)).toBeInTheDocument()
 	})
+
+	it("should update table dimensions when chair count changes", () => {
+		const tableWith10Chairs: Table = {
+			id: "table-1",
+			name: "Table 1",
+			chairCount: 10,
+			seats: Array(10).fill(null),
+		}
+
+		const { container, rerender } = render(
+			<DndContext>
+				<CircularTable table={tableWith10Chairs} />
+			</DndContext>,
+		)
+
+		// Check initial state with 10 chairs - container should be 300px (base size)
+		let tableContainer = container.querySelector('[style*="width: 300px"]')
+		expect(tableContainer).toBeInTheDocument()
+
+		// Update to 20 chairs (requires larger radius)
+		const tableWith20Chairs: Table = {
+			id: "table-1",
+			name: "Table 1",
+			chairCount: 20,
+			seats: Array(20).fill(null),
+		}
+
+		rerender(
+			<DndContext>
+				<CircularTable table={tableWith20Chairs} />
+			</DndContext>,
+		)
+
+		// Container should now be larger (calculated ~495.6px)
+		// minRadius = (20 * 64) / (2π) ≈ 204px
+		// container = 2 * (204 + 28 + 16) ≈ 495.6px
+		tableContainer = container.querySelector('[style*="width: 495."]') || 
+		                container.querySelector('[style*="width: 496"]')
+		expect(tableContainer).toBeInTheDocument()
+
+		// Verify seat count updated
+		expect(screen.getByText("0 / 20 seats")).toBeInTheDocument()
+	})
+
+	it("should scale table center circle based on chair count", () => {
+		const tableWith10Chairs: Table = {
+			id: "table-1",
+			name: "Table 1",
+			chairCount: 10,
+			seats: Array(10).fill(null),
+		}
+
+		const { container, rerender } = render(
+			<DndContext>
+				<CircularTable table={tableWith10Chairs} />
+			</DndContext>,
+		)
+
+		// For 10 chairs: containerSize = 300px, scale = 40% (35% + (10/30)*15%), center = 120px
+		let centerCircle = container.querySelector('.rounded-full.border-4.border-muted')
+		let centerStyle = centerCircle?.getAttribute('style') || ''
+		// Allow for floating point precision - match 119-120px
+		expect(centerStyle).toMatch(/width: 1[12]\d(\.\d+)?px/)
+		expect(centerStyle).toMatch(/height: 1[12]\d(\.\d+)?px/)
+
+		// Update to 30 chairs
+		const tableWith30Chairs: Table = {
+			id: "table-1",
+			name: "Table 1",
+			chairCount: 30,
+			seats: Array(30).fill(null),
+		}
+
+		rerender(
+			<DndContext>
+				<CircularTable table={tableWith30Chairs} />
+			</DndContext>,
+		)
+
+		// For 30 chairs: containerSize = 500px (capped), scale = 50% (35% + (30/30)*15%), center = 250px
+		centerCircle = container.querySelector('.rounded-full.border-4.border-muted')
+		centerStyle = centerCircle?.getAttribute('style') || ''
+		expect(centerStyle).toMatch(/width: 25\d(\.\d+)?px/)
+		expect(centerStyle).toMatch(/height: 25\d(\.\d+)?px/)
+	})
 })
