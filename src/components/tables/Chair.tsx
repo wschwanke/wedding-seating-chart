@@ -65,14 +65,14 @@ export function Chair({
 					transform: "translate(-50%, -50%)",
 				}}
 			>
-				<div
-					className={cn(
-						"w-12 h-12 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
-						"bg-muted/50 border-border",
-						isOver && "ring-2 ring-primary ring-offset-2 scale-110",
-					)}
-				>
-					<User className="h-4 w-4 text-muted-foreground/50" />
+			<div
+				className={cn(
+					"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
+					"bg-muted/50 border-border",
+					isOver && "ring-2 ring-primary ring-offset-2 scale-110",
+				)}
+			>
+				<User className="h-5 w-5 text-muted-foreground/50" />
 				</div>
 			</div>
 		)
@@ -103,7 +103,7 @@ export function Chair({
 							}
 						}}
 						className={cn(
-							"w-12 h-12 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
+							"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
 							"bg-background border-primary shadow-md cursor-pointer hover:scale-105",
 							isOver && "ring-2 ring-primary ring-offset-2 scale-110",
 							isDragging && "opacity-50",
@@ -115,10 +115,10 @@ export function Chair({
 						}}
 					>
 						<div className="text-center leading-tight overflow-hidden pointer-events-none">
-							<div className="text-[10px] font-semibold truncate px-1">
+							<div className="text-xs font-semibold truncate px-1">
 								{guest.firstName}
 							</div>
-							<div className="text-[9px] truncate px-1">{guest.lastName}</div>
+							<div className="text-[10px] truncate px-1">{guest.lastName}</div>
 						</div>
 					</div>
 				</PopoverTrigger>

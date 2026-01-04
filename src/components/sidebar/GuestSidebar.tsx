@@ -122,12 +122,33 @@ export function GuestSidebar() {
 	const unassignedGuests = tables && getUnassignedGuests()
 	const assignedGuestsData = tables && getAssignedGuests()
 
+	// Get unique relationships from guests (needed for initial expansion state)
+	const uniqueRelationshipIds = Array.from(new Set(guests.map((g) => g.relationshipId)))
+	const uniqueRelationships = relationships.filter((r) => uniqueRelationshipIds.includes(r.id))
+
 	// Track expanded state for relationships and subgroups/parties
-	const [expandedRelationships, setExpandedRelationships] = useState<Set<string>>(new Set())
+	// Separate states for unassigned (expanded by default) and assigned (collapsed by default)
+	const [expandedUnassignedRelationships, setExpandedUnassignedRelationships] = useState<Set<string>>(() => {
+		// Start with all relationships expanded in unassigned section
+		return new Set(uniqueRelationshipIds)
+	})
+	const [expandedAssignedRelationships, setExpandedAssignedRelationships] = useState<Set<string>>(new Set())
 	const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(new Set())
 
-	const toggleRelationship = (relationship: string): void => {
-		setExpandedRelationships((prev) => {
+	const toggleUnassignedRelationship = (relationship: string): void => {
+		setExpandedUnassignedRelationships((prev) => {
+			const next = new Set(prev)
+			if (next.has(relationship)) {
+				next.delete(relationship)
+			} else {
+				next.add(relationship)
+			}
+			return next
+		})
+	}
+
+	const toggleAssignedRelationship = (relationship: string): void => {
+		setExpandedAssignedRelationships((prev) => {
 			const next = new Set(prev)
 			if (next.has(relationship)) {
 				next.delete(relationship)
@@ -159,10 +180,6 @@ export function GuestSidebar() {
 		setEditingGuest(undefined)
 		setGuestFormOpen(true)
 	}
-
-	// Get unique relationships from guests
-	const uniqueRelationshipIds = Array.from(new Set(guests.map((g) => g.relationshipId)))
-	const uniqueRelationships = relationships.filter((r) => uniqueRelationshipIds.includes(r.id))
 
 	// Helper to organize guests by relationship -> party -> guests hierarchy
 	const organizeGuestsByRelationship = (guestList: Guest[]) => {
@@ -243,7 +260,7 @@ export function GuestSidebar() {
 	const assignedByRelationship = organizeAssignedByRelationship()
 
 	return (
-		<div className="w-80 border-r bg-muted/20 flex flex-col h-full">
+		<div className="w-96 border-r bg-muted/20 flex flex-col h-full">
 			<div className="p-4 border-b space-y-2">
 				<h2 className="text-lg font-semibold">Guests</h2>
 				<CsvImport />
@@ -340,7 +357,7 @@ export function GuestSidebar() {
 											const relationship = relationships.find(r => r.id === relationshipId)
 											if (!relationship) return null
 
-											const isRelExpanded = expandedRelationships.has(relationshipId)
+											const isRelExpanded = expandedUnassignedRelationships.has(relationshipId)
 											const relationshipColor = relationship.color
 
 											return (
@@ -348,7 +365,7 @@ export function GuestSidebar() {
 													{/* Relationship Header */}
 													<button
 														type="button"
-														onClick={() => toggleRelationship(relationshipId)}
+														onClick={() => toggleUnassignedRelationship(relationshipId)}
 														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
 													>
 														{isRelExpanded ? (
@@ -420,7 +437,7 @@ export function GuestSidebar() {
 											const relationship = relationships.find(r => r.id === relationshipId)
 											if (!relationship) return null
 
-											const isRelExpanded = expandedRelationships.has(relationshipId)
+											const isRelExpanded = expandedAssignedRelationships.has(relationshipId)
 											const relationshipColor = relationship.color
 
 											return (
@@ -428,7 +445,7 @@ export function GuestSidebar() {
 													{/* Relationship Header */}
 													<button
 														type="button"
-														onClick={() => toggleRelationship(relationshipId)}
+														onClick={() => toggleAssignedRelationship(relationshipId)}
 														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
 													>
 														{isRelExpanded ? (

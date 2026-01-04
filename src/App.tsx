@@ -20,13 +20,12 @@ function App() {
 	const tables = useSeatingStore((state) => state.tables)
 	const relationships = useSeatingStore((state) => state.relationships)
 
-	// Configure drag activation - 100ms delay + 4px distance tolerance
+	// Configure drag activation - 5px distance tolerance
 	// This allows clicks on buttons to work without triggering drag
 	const sensors = useSensors(
 		useSensor(PointerSensor, {
 			activationConstraint: {
-				delay: 100,
-				tolerance: 4,
+				distance: 5,
 			},
 		}),
 	)

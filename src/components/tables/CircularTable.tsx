@@ -49,9 +49,9 @@ export function CircularTable({ table }: CircularTableProps) {
 	}
 
 	// Calculate chair positions in a circle
-	const radius = 80 // pixels from center
-	const centerX = 120
-	const centerY = 120
+	const radius = 100 // pixels from center
+	const centerX = 150
+	const centerY = 150
 
 	const chairPositions = Array.from({ length: table.chairCount }, (_, i) => {
 		const angle = (i / table.chairCount) * 2 * Math.PI - Math.PI / 2
@@ -148,7 +148,7 @@ export function CircularTable({ table }: CircularTableProps) {
 				</div>
 
 				{/* Circular table visualization */}
-				<div className="relative" style={{ width: "240px", height: "240px" }}>
+				<div className="relative" style={{ width: "300px", height: "300px" }}>
 					{/* Table center */}
 					<div
 						className="absolute rounded-full border-4 border-muted bg-background flex items-center justify-center"
@@ -156,11 +156,11 @@ export function CircularTable({ table }: CircularTableProps) {
 							left: "50%",
 							top: "50%",
 							transform: "translate(-50%, -50%)",
-							width: "100px",
-							height: "100px",
+							width: "130px",
+							height: "130px",
 						}}
 					>
-						<span className="text-2xl font-bold text-muted-foreground/30">
+						<span className="text-3xl font-bold text-muted-foreground/30">
 							{table.name.split(" ")[1] || table.name}
 						</span>
 					</div>

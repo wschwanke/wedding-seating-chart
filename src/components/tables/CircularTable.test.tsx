@@ -119,7 +119,7 @@ describe("CircularTable", () => {
 
 		// Each chair is rendered as a chair component
 		// The chairs are positioned in a circle
-		const tableContainer = container.querySelector('[style*="width: 240px"]')
+		const tableContainer = container.querySelector('[style*="width: 300px"]')
 		expect(tableContainer).toBeInTheDocument()
 	})
 
