@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Chair } from "./Chair"
+import { GuestForm } from "@/components/guests/GuestForm"
 import { useSeatingStore } from "@/stores/useSeatingStore"
-import type { Table } from "@/types"
+import type { Guest, Table } from "@/types"
 import { Settings, Plus, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -27,6 +28,13 @@ export function CircularTable({ table }: CircularTableProps) {
 
 	const [tableName, setTableName] = useState(table.name)
 	const [chairCount, setChairCount] = useState(table.chairCount)
+	const [guestFormOpen, setGuestFormOpen] = useState(false)
+	const [editingGuest, setEditingGuest] = useState<Guest | undefined>()
+
+	const handleEditGuest = (guest: Guest): void => {
+		setEditingGuest(guest)
+		setGuestFormOpen(true)
+	}
 
 	const handleSaveSettings = (): void => {
 		if (tableName !== table.name) {
@@ -65,6 +73,7 @@ export function CircularTable({ table }: CircularTableProps) {
 	const isOverCapacity = isTableOverCapacity(table.id)
 
 	return (
+		<>
 		<Card className="relative">
 			<div className="p-4">
 				{/* Table header */}
@@ -165,22 +174,30 @@ export function CircularTable({ table }: CircularTableProps) {
 						</span>
 					</div>
 
-					{/* Chairs */}
-					{table.seats.map((guestId, index) => {
-						const guest = guestId ? guests.find((g) => g.id === guestId) : null
-						return (
-							<Chair
-								key={index}
-								tableId={table.id}
-								seatIndex={index}
-								guest={guest || null}
-								color={getGuestColor(guestId)}
-								position={chairPositions[index]}
-							/>
-						)
-					})}
-				</div>
+				{/* Chairs */}
+				{table.seats.map((guestId, index) => {
+					const guest = guestId ? guests.find((g) => g.id === guestId) : null
+					return (
+						<Chair
+							key={index}
+							tableId={table.id}
+							seatIndex={index}
+							guest={guest || null}
+							color={getGuestColor(guestId)}
+							position={chairPositions[index]}
+							onEdit={guest ? () => handleEditGuest(guest) : undefined}
+						/>
+					)
+				})}
 			</div>
+		</div>
 		</Card>
+
+		<GuestForm
+			open={guestFormOpen}
+			onOpenChange={setGuestFormOpen}
+			guest={editingGuest}
+		/>
+		</>
 	)
 }

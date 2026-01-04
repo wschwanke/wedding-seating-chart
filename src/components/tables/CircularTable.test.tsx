@@ -14,10 +14,15 @@ vi.mock("@/stores/useSeatingStore", () => ({
 	useSeatingStore: vi.fn((selector) => {
 		const mockState = {
 			guests: [],
-			settings: { groupColors: [] },
+			relationships: [
+				{ id: "rel-1", name: "Family", color: "#ff0000" },
+			],
+			subgroups: [],
 			updateTableName: mockUpdateTableName,
 			updateTableChairCount: mockUpdateTableChairCount,
 			isTableOverCapacity: mockIsTableOverCapacity,
+			updateGuest: vi.fn(),
+			addRelationship: vi.fn(),
 		}
 		return selector ? selector(mockState) : mockState
 	}),

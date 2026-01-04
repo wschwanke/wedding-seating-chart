@@ -3,7 +3,7 @@ import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import type { Guest } from "@/types"
-import { User, X } from "lucide-react"
+import { User, X, Edit } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { useSeatingStore } from "@/stores/useSeatingStore"
@@ -14,6 +14,7 @@ interface ChairProps {
 	guest: Guest | null
 	color?: string
 	position: { x: number; y: number }
+	onEdit?: () => void
 }
 
 export function Chair({
@@ -22,6 +23,7 @@ export function Chair({
 	guest,
 	color,
 	position,
+	onEdit,
 }: ChairProps) {
 	const [popoverOpen, setPopoverOpen] = useState(false)
 	const unassignGuest = useSeatingStore((state) => state.unassignGuest)
@@ -114,11 +116,10 @@ export function Chair({
 							...(transform && { transform: CSS.Translate.toString(transform) }),
 						}}
 					>
-						<div className="text-center leading-tight overflow-hidden pointer-events-none">
-							<div className="text-xs font-semibold truncate px-1">
-								{guest.firstName}
+						<div className="text-center overflow-hidden pointer-events-none">
+							<div className="text-xs font-bold">
+								{guest.firstName.charAt(0).toUpperCase()}{guest.lastName.charAt(0).toUpperCase()}
 							</div>
-							<div className="text-[10px] truncate px-1">{guest.lastName}</div>
 						</div>
 					</div>
 				</PopoverTrigger>
@@ -135,15 +136,31 @@ export function Chair({
 								</p>
 							)}
 						</div>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={handleRemoveFromSeat}
-							className="w-full justify-start"
-						>
-							<X className="h-4 w-4 mr-2" />
-							Remove from Seat
-						</Button>
+						<div className="space-y-2">
+							{onEdit && (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => {
+										onEdit()
+										setPopoverOpen(false)
+									}}
+									className="w-full justify-start"
+								>
+									<Edit className="h-4 w-4 mr-2" />
+									Edit Guest
+								</Button>
+							)}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleRemoveFromSeat}
+								className="w-full justify-start"
+							>
+								<X className="h-4 w-4 mr-2" />
+								Remove from Seat
+							</Button>
+						</div>
 					</div>
 				</PopoverContent>
 			</Popover>
