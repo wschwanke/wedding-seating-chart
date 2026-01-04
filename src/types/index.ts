@@ -84,6 +84,7 @@ export interface SeatingStore {
 	// Table actions
 	assignToSeat: (guestId: string, tableId: string, seatIndex: number) => void
 	unassignGuest: (guestId: string) => void
+	swapSeats: (guestId1: string, guestId2: string) => void
 	moveSubgroup: (subgroupId: string, tableId: string, startSeatIndex: number) => void
 	updateTableName: (tableId: string, name: string) => void
 	updateTableChairCount: (tableId: string, chairCount: number) => void

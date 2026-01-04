@@ -99,7 +99,7 @@ describe("GuestCard", () => {
 		expect(mockOnEdit).toHaveBeenCalledTimes(1)
 	})
 
-	it("should show edit button only for main guests", () => {
+	it("should show edit button for all guests when onEdit is provided", () => {
 		const partyMember: Guest = {
 			...mockGuest,
 			isMainGuest: false,
@@ -112,13 +112,13 @@ describe("GuestCard", () => {
 			</DndContext>,
 		)
 
-		// Should have only delete button (1 button)
+		// Should have both edit and delete buttons (2 buttons)
 		const buttons = container.querySelectorAll("button")
 		// Filter out the card itself which might be draggable
 		const actionButtons = Array.from(buttons).filter((btn) =>
 			btn.querySelector("svg"),
 		)
-		expect(actionButtons.length).toBeLessThanOrEqual(1)
+		expect(actionButtons.length).toBeGreaterThanOrEqual(2)
 	})
 
 	it("should apply muted style when assigned", () => {

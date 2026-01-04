@@ -57,20 +57,47 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 		return relationships.find((r) => r.id === guest.relationshipId)?.color
 	}, [guests, relationships])
 
-	// Calculate chair positions in a circle - memoize to prevent recalculation
-	const radius = 100 // pixels from center
-	const centerX = 150
-	const centerY = 150
+	// Calculate dynamic table sizing based on chair count - memoize to prevent recalculation
+	const tableDimensions = useMemo(() => {
+		const CHAIR_SIZE = 56 // pixels (w-14)
+		const MIN_GAP = 8 // minimum pixels between chairs
+		const MIN_SPACING = CHAIR_SIZE + MIN_GAP // 64px arc per chair
+		const BASE_RADIUS = 100
+		const BASE_CONTAINER = 300
+		const BASE_TABLE_CENTER = 130
+		const MAX_CONTAINER = 500 // Maximum container size
+
+		// Calculate minimum radius needed to fit all chairs without overlap
+		const minRadiusForChairs = (table.chairCount * MIN_SPACING) / (2 * Math.PI)
+		const radius = Math.max(BASE_RADIUS, minRadiusForChairs)
+
+		// Calculate container size (capped at MAX_CONTAINER)
+		const idealContainer = 2 * (radius + CHAIR_SIZE / 2 + 16)
+		const containerSize = Math.min(MAX_CONTAINER, Math.max(BASE_CONTAINER, idealContainer))
+
+		// Recalculate radius if container was capped (chairs may overlap on very large tables)
+		const effectiveRadius = containerSize === MAX_CONTAINER 
+			? (containerSize / 2) - CHAIR_SIZE / 2 - 16 
+			: radius
+
+		const centerX = containerSize / 2
+		const centerY = containerSize / 2
+
+		// Scale table center proportionally
+		const tableCenterSize = Math.max(BASE_TABLE_CENTER, effectiveRadius * 0.65)
+
+		return { containerSize, effectiveRadius, centerX, centerY, tableCenterSize }
+	}, [table.chairCount])
 
 	const chairPositions = useMemo(() => 
 		Array.from({ length: table.chairCount }, (_, i) => {
 			const angle = (i / table.chairCount) * 2 * Math.PI - Math.PI / 2
 			return {
-				x: centerX + radius * Math.cos(angle),
-				y: centerY + radius * Math.sin(angle),
+				x: tableDimensions.centerX + tableDimensions.effectiveRadius * Math.cos(angle),
+				y: tableDimensions.centerY + tableDimensions.effectiveRadius * Math.sin(angle),
 			}
 		}),
-		[table.chairCount]
+		[table.chairCount, tableDimensions]
 	)
 
 	const assignedCount = table.seats.filter((s) => s !== null).length
@@ -78,8 +105,8 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 
 	return (
 		<>
-		<Card className="relative">
-			<div className="p-4">
+		<Card className="relative min-h-[420px]">
+			<div className="p-4 h-full flex flex-col">
 				{/* Table header */}
 				<div className="flex items-center justify-between mb-2">
 					<h3 className="font-semibold text-sm">{table.name}</h3>
@@ -160,41 +187,49 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 					{isOverCapacity && " - Over capacity!"}
 				</div>
 
-				{/* Circular table visualization */}
-				<div className="relative" style={{ width: "300px", height: "300px" }}>
-					{/* Table center */}
-					<div
-						className="absolute rounded-full border-4 border-muted bg-background flex items-center justify-center"
-						style={{
-							left: "50%",
-							top: "50%",
-							transform: "translate(-50%, -50%)",
-							width: "130px",
-							height: "130px",
+				{/* Circular table visualization - centered */}
+				<div className="flex-1 flex items-center justify-center">
+					<div 
+						className="relative" 
+						style={{ 
+							width: `${tableDimensions.containerSize}px`, 
+							height: `${tableDimensions.containerSize}px` 
 						}}
 					>
-						<span className="text-3xl font-bold text-muted-foreground/30">
-							{table.name.split(" ")[1] || table.name}
-						</span>
-					</div>
+						{/* Table center */}
+						<div
+							className="absolute rounded-full border-4 border-muted bg-background flex items-center justify-center"
+							style={{
+								left: "50%",
+								top: "50%",
+								transform: "translate(-50%, -50%)",
+								width: `${tableDimensions.tableCenterSize}px`,
+								height: `${tableDimensions.tableCenterSize}px`,
+							}}
+						>
+							<span className="text-3xl font-bold text-muted-foreground/30">
+								{table.name.split(" ")[1] || table.name}
+							</span>
+						</div>
 
-				{/* Chairs */}
-				{table.seats.map((guestId, index) => {
-					const guest = guestId ? guests.find((g) => g.id === guestId) : null
-					return (
-						<Chair
-							key={index}
-							tableId={table.id}
-							seatIndex={index}
-							guest={guest || null}
-							color={getGuestColor(guestId)}
-							position={chairPositions[index]}
-							onEdit={guest ? () => handleEditGuest(guest) : undefined}
-						/>
-					)
-				})}
+						{/* Chairs */}
+						{table.seats.map((guestId, index) => {
+							const guest = guestId ? guests.find((g) => g.id === guestId) : null
+							return (
+								<Chair
+									key={index}
+									tableId={table.id}
+									seatIndex={index}
+									guest={guest || null}
+									color={getGuestColor(guestId)}
+									position={chairPositions[index]}
+									onEdit={guest ? () => handleEditGuest(guest) : undefined}
+								/>
+							)
+						})}
+					</div>
+				</div>
 			</div>
-		</div>
 		</Card>
 
 		<GuestForm

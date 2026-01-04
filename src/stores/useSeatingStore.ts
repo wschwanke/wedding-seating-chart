@@ -541,16 +541,64 @@ export const useSeatingStore = create<SeatingStore>()(
 				set({ tables: finalTables })
 			},
 
-			unassignGuest: (guestId) => {
-				set({
-					tables: get().tables.map((table) => ({
-						...table,
-						seats: table.seats.map((seat) => (seat === guestId ? null : seat)),
-					})),
-				})
-			},
+		unassignGuest: (guestId) => {
+			set({
+				tables: get().tables.map((table) => ({
+					...table,
+					seats: table.seats.map((seat) => (seat === guestId ? null : seat)),
+				})),
+			})
+		},
 
-			moveSubgroup: (subgroupId, tableId, startSeatIndex) => {
+		swapSeats: (guestId1, guestId2) => {
+			const state = get()
+			
+			// Find both guests' current seats
+			let guest1Seat: { tableId: string; seatIndex: number } | null = null
+			let guest2Seat: { tableId: string; seatIndex: number } | null = null
+			
+			for (const table of state.tables) {
+				for (let i = 0; i < table.seats.length; i++) {
+					if (table.seats[i] === guestId1) {
+						guest1Seat = { tableId: table.id, seatIndex: i }
+					}
+					if (table.seats[i] === guestId2) {
+						guest2Seat = { tableId: table.id, seatIndex: i }
+					}
+				}
+			}
+			
+			// Both guests must be seated to swap
+			if (!guest1Seat || !guest2Seat) return
+			
+			// Perform the swap
+			set({
+				tables: state.tables.map((table) => {
+					if (table.id === guest1Seat!.tableId) {
+						return {
+							...table,
+							seats: table.seats.map((seat, idx) => {
+								if (idx === guest1Seat!.seatIndex) return guestId2
+								if (idx === guest2Seat!.seatIndex && guest2Seat!.tableId === table.id) return guestId1
+								return seat
+							})
+						}
+					}
+					if (table.id === guest2Seat!.tableId && guest2Seat!.tableId !== guest1Seat!.tableId) {
+						return {
+							...table,
+							seats: table.seats.map((seat, idx) => {
+								if (idx === guest2Seat!.seatIndex) return guestId1
+								return seat
+							})
+						}
+					}
+					return table
+				})
+			})
+		},
+
+		moveSubgroup: (subgroupId, tableId, startSeatIndex) => {
 				const state = get()
 				const subgroup = state.subgroups.find((sg) => sg.id === subgroupId)
 
@@ -760,18 +808,22 @@ export const useSeatingStore = create<SeatingStore>()(
 				if (version < 2) {
 					const oldState = persistedState as any
 					
-					// Create relationships from old relationshipColors
+					// Create relationships from old groupColors or relationshipColors
 					const relationshipMap = new Map<string, string>() // name -> id
 					const relationships: Relationship[] = []
 					
+					// Handle both naming conventions: groupColors (older) and relationshipColors (newer)
+					const groupColors = oldState.settings?.groupColors || oldState.settings?.relationshipColors || []
+					
 					// Get unique relationships from settings if they exist
-					if (oldState.settings?.relationshipColors) {
-						for (const rc of oldState.settings.relationshipColors) {
+					for (const rc of groupColors) {
+						const name = rc.group || rc.relationship // Handle both property names
+						if (name) {
 							const id = generateId()
-							relationshipMap.set(rc.relationship, id)
+							relationshipMap.set(name, id)
 							relationships.push({ 
 								id, 
-								name: rc.relationship, 
+								name, 
 								color: rc.color 
 							})
 						}
@@ -780,12 +832,13 @@ export const useSeatingStore = create<SeatingStore>()(
 					// Also get unique relationships from guests (in case some weren't in settings)
 					if (oldState.guests) {
 						for (const guest of oldState.guests) {
-							if (guest.relationship && !relationshipMap.has(guest.relationship)) {
+							const groupName = guest.group || guest.relationship // Handle both property names
+							if (groupName && !relationshipMap.has(groupName)) {
 								const id = generateId()
-								relationshipMap.set(guest.relationship, id)
+								relationshipMap.set(groupName, id)
 								relationships.push({ 
 									id, 
-									name: guest.relationship, 
+									name: groupName, 
 									color: generateRandomColor() 
 								})
 							}
@@ -794,11 +847,13 @@ export const useSeatingStore = create<SeatingStore>()(
 					
 					// Migrate guests to use relationshipId
 					const migratedGuests = oldState.guests?.map((guest: any) => {
-						const relationshipId = relationshipMap.get(guest.relationship) || ""
-						const { relationship, ...rest } = guest
+						const groupName = guest.group || guest.relationship // Handle both property names
+						const relationshipId = relationshipMap.get(groupName) || ""
+						const { group, relationship, ...rest } = guest
 						return {
 							...rest,
 							relationshipId,
+							party: guest.party || "", // Ensure party field exists
 						}
 					}) || []
 					

@@ -107,30 +107,30 @@ export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignm
 					)}
 				</div>
 				<div className="flex gap-1">
-					{assignment && (
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-6 w-6"
-							onClick={handleUnassign}
-							onPointerDown={preventDrag}
-							aria-label={`Remove ${guest.firstName} from seat`}
-						>
-							<Armchair className="h-3 w-3" />
-						</Button>
-					)}
-					{guest.isMainGuest && (
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-6 w-6"
-							onClick={handleEdit}
-							onPointerDown={preventDrag}
-							aria-label={`Edit ${guest.firstName} ${guest.lastName}`}
-						>
-							<Edit className="h-3 w-3" />
-						</Button>
-					)}
+				{assignment && (
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-6 w-6 text-destructive hover:text-destructive"
+						onClick={handleUnassign}
+						onPointerDown={preventDrag}
+						aria-label={`Remove ${guest.firstName} from seat`}
+					>
+						<Armchair className="h-3 w-3" />
+					</Button>
+				)}
+				{onEdit && (
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-6 w-6"
+						onClick={handleEdit}
+						onPointerDown={preventDrag}
+						aria-label={`Edit ${guest.firstName} ${guest.lastName}`}
+					>
+						<Edit className="h-3 w-3" />
+					</Button>
+				)}
 					<Button
 						variant="ghost"
 						size="icon"

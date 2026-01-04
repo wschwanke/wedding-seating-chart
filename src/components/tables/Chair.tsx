@@ -1,5 +1,5 @@
 import { useState, useMemo, memo } from "react"
-import { useDroppable, useDraggable } from "@dnd-kit/core"
+import { useDroppable, useDraggable, useDndContext } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import type { Guest } from "@/types"
@@ -28,6 +28,7 @@ export const Chair = memo(function Chair({
 	const [popoverOpen, setPopoverOpen] = useState(false)
 	const unassignGuest = useSeatingStore((state) => state.unassignGuest)
 	const relationships = useSeatingStore((state) => state.relationships)
+	const { active } = useDndContext()
 	
 	// Memoize relationship lookup to prevent unnecessary recalculations
 	const relationship = useMemo(() => 
@@ -39,6 +40,9 @@ export const Chair = memo(function Chair({
 		id: `${tableId}-${seatIndex}`,
 		data: { tableId, seatIndex },
 	})
+	
+	// Check if we're in a swap scenario (dragging from chair to occupied seat)
+	const isSwapTarget = isOver && guest && active && String(active.id).startsWith('chair-')
 
 	const { 
 		attributes, 
@@ -111,7 +115,8 @@ export const Chair = memo(function Chair({
 					className={cn(
 						"w-14 h-14 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-[transform,box-shadow,border-color]",
 						"bg-background border-primary shadow-md cursor-grab active:cursor-grabbing hover:scale-105 select-none",
-						isOver && "ring-2 ring-primary ring-offset-2 scale-110",
+						isOver && !isSwapTarget && "ring-2 ring-primary ring-offset-2 scale-110",
+						isSwapTarget && "border-yellow-500 border-dashed border-4 ring-2 ring-yellow-500 ring-offset-2 scale-110",
 						isDragging && "opacity-30",
 					)}
 					style={{

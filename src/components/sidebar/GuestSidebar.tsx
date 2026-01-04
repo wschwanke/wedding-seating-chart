@@ -283,7 +283,7 @@ export function GuestSidebar() {
 	)
 
 	return (
-		<div className="w-96 border-r bg-muted/20 flex flex-col h-full">
+		<div className="w-[408px] border-r bg-muted/20 flex flex-col h-full">
 			<div className="p-4 border-b space-y-2">
 				<h2 className="text-lg font-semibold">Guests</h2>
 				<CsvImport />

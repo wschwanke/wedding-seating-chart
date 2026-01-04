@@ -5,6 +5,7 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  useDndContext,
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { useState, useCallback } from "react";
@@ -17,7 +18,7 @@ import { useSeatingStore } from "@/stores/useSeatingStore";
 import type { Guest, Subgroup } from "@/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Card } from "@/components/ui/card";
-import { Users } from "lucide-react";
+import { Users, ArrowLeftRight } from "lucide-react";
 
 interface ChairDragOverlayProps {
   guest: Guest;
@@ -25,18 +26,37 @@ interface ChairDragOverlayProps {
 }
 
 function ChairDragOverlay({ guest, color }: ChairDragOverlayProps) {
+  const { over } = useDndContext();
+  const tables = useSeatingStore((state) => state.tables);
+  
+  // Check if we're hovering over an occupied seat (swap scenario)
+  const isSwapScenario = over && (() => {
+    const dropData = over.data.current as { tableId: string; seatIndex: number } | undefined;
+    if (!dropData) return false;
+    const table = tables.find((t) => t.id === dropData.tableId);
+    return table && table.seats[dropData.seatIndex] !== null;
+  })();
+  
   return (
-    <div
-      className="w-16 h-16 rounded-full border-2 flex items-center justify-center text-xs font-medium shadow-lg"
-      style={{
-        backgroundColor: color ? `${color}20` : "#f5f5f5",
-        borderColor: color || "#888",
-      }}
-    >
-      <div className="text-center">
-        <div className="text-sm font-bold">
-          {guest.firstName.charAt(0).toUpperCase()}
-          {guest.lastName.charAt(0).toUpperCase()}
+    <div className="relative">
+      {isSwapScenario && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-2 py-1 rounded-md flex items-center gap-1 text-xs font-semibold shadow-lg">
+          <ArrowLeftRight className="h-3 w-3" />
+          Swap
+        </div>
+      )}
+      <div
+        className="w-16 h-16 rounded-full border-2 flex items-center justify-center text-xs font-medium shadow-lg"
+        style={{
+          backgroundColor: color ? `${color}20` : "#f5f5f5",
+          borderColor: color || "#888",
+        }}
+      >
+        <div className="text-center">
+          <div className="text-sm font-bold">
+            {guest.firstName.charAt(0).toUpperCase()}
+            {guest.lastName.charAt(0).toUpperCase()}
+          </div>
         </div>
       </div>
     </div>
@@ -54,6 +74,7 @@ function App() {
     null,
   );
   const assignToSeat = useSeatingStore((state) => state.assignToSeat);
+  const swapSeats = useSeatingStore((state) => state.swapSeats);
   const tables = useSeatingStore((state) => state.tables);
   const relationships = useSeatingStore((state) => state.relationships);
 
@@ -148,14 +169,23 @@ function App() {
     const guest = activeData?.guest as Guest | undefined;
     if (!guest) return;
 
-    // Check if drop seat is empty
+    // Check if drop seat is occupied
     const table = tables.find((t) => t.id === dropData.tableId);
-    if (table && table.seats[dropData.seatIndex] !== null) {
-      // Cannot drop on occupied seat
-      return;
+    const targetGuestId = table?.seats[dropData.seatIndex];
+    
+    if (targetGuestId) {
+      // Seat is occupied
+      if (dragSource === 'chair') {
+        // Dragging from chair to occupied seat -> SWAP
+        swapSeats(guest.id, targetGuestId);
+      } else {
+        // Dragging from sidebar to occupied seat -> BLOCK
+        return;
+      }
+    } else {
+      // Seat is empty -> normal assignment
+      assignToSeat(guest.id, dropData.tableId, dropData.seatIndex);
     }
-
-    assignToSeat(guest.id, dropData.tableId, dropData.seatIndex);
   };
 
   const getGuestColor = useCallback(
