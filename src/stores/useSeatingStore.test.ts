@@ -1,0 +1,347 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { useSeatingStore } from "./useSeatingStore"
+
+// Helper to get fresh store state
+const getStore = () => useSeatingStore.getState()
+
+describe("useSeatingStore", () => {
+	beforeEach(() => {
+		// Clear localStorage to reset persisted state
+		localStorage.clear()
+	})
+
+	afterEach(() => {
+		// Reset store after each test
+		getStore().clearAll()
+	})
+
+	describe("Guest Management", () => {
+		it("should add a guest", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			const guests = getStore().guests
+			expect(guestId).toBeDefined()
+			expect(guests).toHaveLength(1)
+			expect(guests[0].firstName).toBe("John")
+			expect(guests[0].isMainGuest).toBe(true)
+		})
+
+		it("should create subgroup for party size > 1", () => {
+			getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 3,
+				group: "Family",
+			})
+
+			const { guests, subgroups } = getStore()
+			// Should create 3 guests total (1 main + 2 party members)
+			expect(guests).toHaveLength(3)
+			expect(subgroups).toHaveLength(1)
+
+			const mainGuest = guests.find((g) => g.isMainGuest)
+			expect(mainGuest?.partySize).toBe(3)
+
+			const partyMembers = guests.filter((g) => !g.isMainGuest)
+			expect(partyMembers).toHaveLength(2)
+			expect(partyMembers[0].firstName).toContain("John Smith's Guest")
+		})
+
+		it("should update a guest", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			getStore().updateGuest(guestId, { firstName: "Jane" })
+
+			const updatedGuest = getStore().guests.find((g) => g.id === guestId)
+			expect(updatedGuest?.firstName).toBe("Jane")
+			expect(updatedGuest?.lastName).toBe("Smith")
+		})
+
+		it("should delete a guest", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			getStore().deleteGuest(guestId)
+
+			expect(getStore().guests).toHaveLength(0)
+		})
+
+		it("should delete guest with party members", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 3,
+				group: "Family",
+			})
+
+			expect(getStore().guests).toHaveLength(3)
+			expect(getStore().subgroups).toHaveLength(1)
+
+			getStore().deleteGuest(guestId)
+
+			// Should delete all party members
+			expect(getStore().guests).toHaveLength(0)
+			expect(getStore().subgroups).toHaveLength(0)
+		})
+
+		it("should auto-assign color to new group", () => {
+			getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			const groupColor = getStore().settings.groupColors.find((gc) => gc.group === "Family")
+			expect(groupColor).toBeDefined()
+			expect(groupColor?.color).toMatch(/^#[0-9a-f]{6}$/i)
+		})
+	})
+
+	describe("Table Management", () => {
+		it("should assign guest to seat", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			const tableId = getStore().tables[0].id
+			getStore().assignToSeat(guestId, tableId, 0)
+
+			expect(getStore().tables[0].seats[0]).toBe(guestId)
+		})
+
+		it("should move guest between seats", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			const tableId = getStore().tables[0].id
+			getStore().assignToSeat(guestId, tableId, 0)
+			expect(getStore().tables[0].seats[0]).toBe(guestId)
+
+			// Move to different seat
+			getStore().assignToSeat(guestId, tableId, 5)
+			expect(getStore().tables[0].seats[0]).toBeNull()
+			expect(getStore().tables[0].seats[5]).toBe(guestId)
+		})
+
+		it("should unassign guest", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			const tableId = getStore().tables[0].id
+			getStore().assignToSeat(guestId, tableId, 0)
+			expect(getStore().tables[0].seats[0]).toBe(guestId)
+
+			getStore().unassignGuest(guestId)
+			expect(getStore().tables[0].seats[0]).toBeNull()
+		})
+
+		it("should update table name", () => {
+			const tableId = getStore().tables[0].id
+
+			getStore().updateTableName(tableId, "Head Table")
+
+			expect(getStore().tables[0].name).toBe("Head Table")
+		})
+
+		it("should update table chair count", () => {
+			const tableId = getStore().tables[0].id
+
+			expect(getStore().tables[0].chairCount).toBe(10)
+			expect(getStore().tables[0].seats).toHaveLength(10)
+
+			getStore().updateTableChairCount(tableId, 8)
+
+			expect(getStore().tables[0].chairCount).toBe(8)
+			expect(getStore().tables[0].seats).toHaveLength(8)
+		})
+	})
+
+	describe("Utility Functions", () => {
+		it("should get unassigned guests", () => {
+			const guest1 = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+			const guest2 = getStore().addGuest({
+				firstName: "Jane",
+				lastName: "Doe",
+				partySize: 1,
+				group: "Friends",
+			})
+
+			// Assign one guest
+			getStore().assignToSeat(guest1, getStore().tables[0].id, 0)
+
+			const unassigned = getStore().getUnassignedGuests()
+			expect(unassigned).toHaveLength(1)
+			expect(unassigned[0].id).toBe(guest2)
+		})
+
+		it("should get assigned guests with table info", () => {
+			const guest1 = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			const tableId = getStore().tables[0].id
+			getStore().assignToSeat(guest1, tableId, 3)
+
+			const assigned = getStore().getAssignedGuests()
+			expect(assigned).toHaveLength(1)
+			expect(assigned[0].guest.id).toBe(guest1)
+			expect(assigned[0].assignment.tableId).toBe(tableId)
+			expect(assigned[0].assignment.seatIndex).toBe(3)
+		})
+
+		it("should get guest assignment", () => {
+			const guestId = getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			const tableId = getStore().tables[0].id
+			getStore().assignToSeat(guestId, tableId, 5)
+
+			const assignment = getStore().getGuestAssignment(guestId)
+			expect(assignment).toBeDefined()
+			expect(assignment?.tableId).toBe(tableId)
+			expect(assignment?.seatIndex).toBe(5)
+		})
+
+		it("should detect table over capacity", () => {
+			const tableId = getStore().tables[0].id
+
+			// Fill all 10 seats
+			for (let i = 0; i < 10; i++) {
+				const guestId = getStore().addGuest({
+					firstName: `Guest${i}`,
+					lastName: "Test",
+					partySize: 1,
+					group: "Family",
+				})
+				getStore().assignToSeat(guestId, tableId, i)
+			}
+
+			// Table is at capacity, not over
+			expect(getStore().isTableOverCapacity(tableId)).toBe(false)
+
+			// Expand capacity and add more guests
+			getStore().updateTableChairCount(tableId, 12)
+			const extra1 = getStore().addGuest({
+				firstName: "Extra1",
+				lastName: "Guest",
+				partySize: 1,
+				group: "Family",
+			})
+			const extra2 = getStore().addGuest({
+				firstName: "Extra2",
+				lastName: "Guest",
+				partySize: 1,
+				group: "Family",
+			})
+			getStore().assignToSeat(extra1, tableId, 10)
+			getStore().assignToSeat(extra2, tableId, 11)
+
+			// Still not over capacity (12 guests, 12 chairs)
+			expect(getStore().isTableOverCapacity(tableId)).toBe(false)
+
+			// Now manually set capacity to less than assigned (simulating over-capacity scenario)
+			// This would happen if capacity check is disabled and guests are force-assigned
+			const table = getStore().tables.find((t) => t.id === tableId)
+			if (table) {
+				table.chairCount = 8 // 12 guests, 8 chairs = over capacity
+			}
+			expect(getStore().isTableOverCapacity(tableId)).toBe(true)
+		})
+	})
+
+	describe("Settings", () => {
+		it("should update group color", () => {
+			getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			getStore().updateGroupColor("Family", "#ff0000")
+
+			const groupColor = getStore().settings.groupColors.find((gc) => gc.group === "Family")
+			expect(groupColor?.color).toBe("#ff0000")
+		})
+
+		it("should update table count", () => {
+			expect(getStore().tables).toHaveLength(10)
+
+			getStore().updateSettings({ tableCount: 15 })
+
+			expect(getStore().tables).toHaveLength(15)
+		})
+
+		it("should update default chair count", () => {
+			getStore().updateSettings({ defaultChairCount: 12 })
+
+			expect(getStore().settings.defaultChairCount).toBe(12)
+		})
+	})
+
+	describe("Import Guests", () => {
+		it("should import multiple guests", () => {
+			getStore().importGuests([
+				{ firstName: "John", lastName: "Smith", partySize: 1, group: "Family" },
+				{ firstName: "Jane", lastName: "Doe", partySize: 2, group: "Friends" },
+			])
+
+			// 1 guest + 1 guest with party size 2 (2 total guests) = 3 guests
+			expect(getStore().guests).toHaveLength(3)
+		})
+
+		it("should detect duplicates", () => {
+			getStore().addGuest({
+				firstName: "John",
+				lastName: "Smith",
+				partySize: 1,
+				group: "Family",
+			})
+
+			getStore().importGuests([
+				{ firstName: "John", lastName: "Smith", partySize: 1, group: "Family" },
+			])
+
+			expect(getStore().duplicates).toHaveLength(1)
+			expect(getStore().duplicates[0].firstName).toBe("John")
+		})
+	})
+})

@@ -319,8 +319,9 @@ export function GuestSidebar() {
 													</PopoverTrigger>
 													<PopoverContent className="w-64">
 														<div className="space-y-2">
-															<Label>Color for "{group}"</Label>
+															<Label htmlFor={`color-${group}`}>Color for "{group}"</Label>
 															<Input
+																id={`color-${group}`}
 																type="color"
 																value={color}
 																onChange={(e) =>

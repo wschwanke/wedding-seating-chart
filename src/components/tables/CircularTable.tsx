@@ -37,6 +37,10 @@ export function CircularTable({ table }: CircularTableProps) {
 		}
 	}
 
+	const preventDrag = (e: React.PointerEvent): void => {
+		e.stopPropagation()
+	}
+
 	const getGuestColor = (guestId: string | null): string | undefined => {
 		if (!guestId) return undefined
 		const guest = guests.find((g) => g.id === guestId)
@@ -68,7 +72,13 @@ export function CircularTable({ table }: CircularTableProps) {
 					<h3 className="font-semibold text-sm">{table.name}</h3>
 					<Popover>
 						<PopoverTrigger asChild>
-							<Button variant="ghost" size="icon" className="h-6 w-6">
+							<Button 
+								variant="ghost" 
+								size="icon" 
+								className="h-6 w-6"
+								onPointerDown={preventDrag}
+								aria-label="Table settings"
+							>
 								<Settings className="h-4 w-4" />
 							</Button>
 						</PopoverTrigger>

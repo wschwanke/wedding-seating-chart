@@ -44,6 +44,10 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 		onEdit?.()
 	}
 
+	const preventDrag = (e: React.PointerEvent): void => {
+		e.stopPropagation()
+	}
+
 	return (
 		<Card
 			ref={setNodeRef}
@@ -92,6 +96,8 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 							size="icon"
 							className="h-6 w-6"
 							onClick={handleEdit}
+							onPointerDown={preventDrag}
+							aria-label={`Edit ${guest.firstName} ${guest.lastName}`}
 						>
 							<Edit className="h-3 w-3" />
 						</Button>
@@ -101,6 +107,8 @@ export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) 
 						size="icon"
 						className="h-6 w-6 text-destructive hover:text-destructive"
 						onClick={handleDelete}
+						onPointerDown={preventDrag}
+						aria-label={`Delete ${guest.firstName} ${guest.lastName}`}
 					>
 						<Trash2 className="h-3 w-3" />
 					</Button>
