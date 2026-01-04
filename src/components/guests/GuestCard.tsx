@@ -2,7 +2,7 @@ import { useMemo, useCallback, memo } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { Card } from "@/components/ui/card"
-import { Users, User, Edit, Trash2, MapPin } from "lucide-react"
+import { Users, User, Edit, Trash2, MapPin, GripVertical, Armchair } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Guest, GuestAssignment } from "@/types"
 import { cn } from "@/lib/utils"
@@ -17,6 +17,7 @@ interface GuestCardProps {
 
 export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) {
 	const deleteGuest = useSeatingStore((state) => state.deleteGuest)
+	const unassignGuest = useSeatingStore((state) => state.unassignGuest)
 	const relationships = useSeatingStore((state) => state.relationships)
 
 	// Memoize relationship lookup
@@ -54,6 +55,11 @@ export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignm
 		onEdit?.()
 	}, [onEdit])
 
+	const handleUnassign = useCallback((e: React.MouseEvent): void => {
+		e.stopPropagation()
+		unassignGuest(guest.id)
+	}, [guest.id, unassignGuest])
+
 	const preventDrag = useCallback((e: React.PointerEvent): void => {
 		e.stopPropagation()
 	}, [])
@@ -71,6 +77,7 @@ export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignm
 			)}
 		>
 			<div className="flex items-start justify-between gap-2">
+				<GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2">
 						{guest.partySize > 1 ? (
@@ -100,6 +107,18 @@ export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignm
 					)}
 				</div>
 				<div className="flex gap-1">
+					{assignment && (
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-6 w-6"
+							onClick={handleUnassign}
+							onPointerDown={preventDrag}
+							aria-label={`Remove ${guest.firstName} from seat`}
+						>
+							<Armchair className="h-3 w-3" />
+						</Button>
+					)}
 					{guest.isMainGuest && (
 						<Button
 							variant="ghost"

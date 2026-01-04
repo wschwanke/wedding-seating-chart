@@ -94,6 +94,7 @@ export interface SeatingStore {
 	// Utility actions
 	autoAssign: () => void
 	clearAll: () => void
+	clearAllSeats: () => void
 	getUnassignedGuests: () => Guest[]
 	getAssignedGuests: () => Array<{ guest: Guest; assignment: GuestAssignment }>
 	getGuestAssignment: (guestId: string) => GuestAssignment | null

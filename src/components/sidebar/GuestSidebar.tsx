@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, memo } from "react"
-import { Plus, Users, AlertCircle, Wand2 } from "lucide-react"
+import { Plus, Users, AlertCircle, Wand2, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -56,10 +56,11 @@ const PartyHeader = memo(function PartyHeader({
 					isDragging && "opacity-50"
 				)}
 			>
+				<GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 				<button
 					type="button"
 					onClick={onToggle}
-					className="flex items-center gap-2 flex-1 hover:text-primary transition-colors"
+					className="flex items-center gap-2 flex-1 hover:text-primary transition-colors cursor-pointer"
 				>
 					{isExpanded ? (
 						<ChevronDown className="h-4 w-4" />
@@ -385,11 +386,11 @@ export function GuestSidebar() {
 											return (
 												<div key={relationshipId} className="space-y-2">
 													{/* Relationship Header */}
-													<button
-														type="button"
-														onClick={() => toggleUnassignedRelationship(relationshipId)}
-														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
-													>
+								<button
+									type="button"
+									onClick={() => toggleUnassignedRelationship(relationshipId)}
+									className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors cursor-pointer"
+								>
 														{isRelExpanded ? (
 															<ChevronDown className="h-4 w-4" />
 														) : (
@@ -465,11 +466,11 @@ export function GuestSidebar() {
 											return (
 												<div key={relationshipId} className="space-y-2">
 													{/* Relationship Header */}
-													<button
-														type="button"
-														onClick={() => toggleAssignedRelationship(relationshipId)}
-														className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors"
-													>
+									<button
+										type="button"
+										onClick={() => toggleAssignedRelationship(relationshipId)}
+										className="flex items-center gap-2 w-full text-left text-sm font-semibold hover:text-primary transition-colors cursor-pointer"
+									>
 														{isRelExpanded ? (
 															<ChevronDown className="h-4 w-4" />
 														) : (

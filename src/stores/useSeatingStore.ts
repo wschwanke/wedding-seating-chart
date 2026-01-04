@@ -662,21 +662,30 @@ export const useSeatingStore = create<SeatingStore>()(
 				set({ tables: updatedTables })
 			},
 
-			clearAll: () => {
-				set({
-					guests: [],
-					subgroups: [],
-					tables: createInitialTables(
-						DEFAULT_SETTINGS.tableCount,
-						DEFAULT_SETTINGS.defaultChairCount,
-					),
-					relationships: [],
-					settings: DEFAULT_SETTINGS,
-					duplicates: [],
-				})
-			},
+		clearAll: () => {
+			set({
+				guests: [],
+				subgroups: [],
+				tables: createInitialTables(
+					DEFAULT_SETTINGS.tableCount,
+					DEFAULT_SETTINGS.defaultChairCount,
+				),
+				relationships: [],
+				settings: DEFAULT_SETTINGS,
+				duplicates: [],
+			})
+		},
 
-			getUnassignedGuests: () => {
+		clearAllSeats: () => {
+			const state = get()
+			const updatedTables = state.tables.map(table => ({
+				...table,
+				seats: Array(table.chairCount).fill(null)
+			}))
+			set({ tables: updatedTables })
+		},
+
+		getUnassignedGuests: () => {
 				const state = get()
 				const assignedGuestIds = new Set(
 					state.tables.flatMap((t) => t.seats.filter((s) => s !== null) as string[]),
