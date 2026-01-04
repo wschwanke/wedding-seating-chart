@@ -25,9 +25,11 @@ export function GuestSidebar() {
 	const updateGroupColor = useSeatingStore((state) => state.updateGroupColor)
 	const resolveDuplicate = useSeatingStore((state) => state.resolveDuplicate)
 	const getUnassignedGuests = useSeatingStore((state) => state.getUnassignedGuests)
+	const getAssignedGuests = useSeatingStore((state) => state.getAssignedGuests)
 	const autoAssign = useSeatingStore((state) => state.autoAssign)
 
 	const unassignedGuests = getUnassignedGuests()
+	const assignedGuestsData = getAssignedGuests()
 
 	// Group unassigned guests by subgroup
 	const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(new Set())
@@ -68,6 +70,13 @@ export function GuestSidebar() {
 
 	const unassignedWithoutSubgroup = unassignedGuests.filter((g) => !g.subgroupId)
 
+	// Organize assigned guests
+	const assignedSubgroups = subgroups.filter((sg) =>
+		sg.guestIds.some((gid) => assignedGuestsData.find((d) => d.guest.id === gid)),
+	)
+
+	const assignedWithoutSubgroup = assignedGuestsData.filter((d) => !d.guest.subgroupId)
+
 	return (
 		<div className="w-80 border-r bg-muted/20 flex flex-col h-full">
 			<div className="p-4 border-b space-y-2">
@@ -88,17 +97,17 @@ export function GuestSidebar() {
 				</Button>
 			</div>
 
-			<Tabs defaultValue="unassigned" className="flex-1 flex flex-col overflow-hidden">
+			<Tabs defaultValue="all" className="flex-1 flex flex-col overflow-hidden">
 				<TabsList className="mx-4 mt-2">
-					<TabsTrigger value="unassigned" className="flex-1">
-						Unassigned ({unassignedGuests.length})
+					<TabsTrigger value="all" className="flex-1">
+						All Guests
 					</TabsTrigger>
 					<TabsTrigger value="groups" className="flex-1">
 						Groups
 					</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="unassigned" className="flex-1 overflow-hidden mt-2">
+				<TabsContent value="all" className="flex-1 overflow-hidden mt-2">
 					{duplicates.length > 0 && (
 						<div className="px-4 pb-2">
 							<Card className="border-destructive">
@@ -144,67 +153,142 @@ export function GuestSidebar() {
 					)}
 
 					<ScrollArea className="flex-1">
-						<div className="px-4 space-y-2 pb-4">
-							{unassignedGuests.length === 0 ? (
-								<p className="text-sm text-muted-foreground text-center py-8">
-									All guests are assigned to tables
-								</p>
-							) : (
-								<>
-									{/* Subgroups */}
-									{unassignedSubgroups.map((subgroup) => {
-										const subgroupGuests = unassignedGuests.filter((g) =>
-											subgroup.guestIds.includes(g.id),
-										)
-										if (subgroupGuests.length === 0) return null
+						<div className="px-4 space-y-4 pb-4">
+							{/* UNASSIGNED SECTION */}
+							<div className="space-y-2">
+								<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+									Unassigned ({unassignedGuests.length})
+								</h3>
+								{unassignedGuests.length === 0 ? (
+									<p className="text-sm text-muted-foreground text-center py-4">
+										All guests are assigned
+									</p>
+								) : (
+									<div className="space-y-2">
+										{/* Unassigned Subgroups */}
+										{unassignedSubgroups.map((subgroup) => {
+											const subgroupGuests = unassignedGuests.filter((g) =>
+												subgroup.guestIds.includes(g.id),
+											)
+											if (subgroupGuests.length === 0) return null
 
-										const isExpanded = expandedSubgroups.has(subgroup.id)
+											const isExpanded = expandedSubgroups.has(subgroup.id)
 
-										return (
-											<div key={subgroup.id} className="space-y-2">
-												<button
-													type="button"
-													onClick={() => toggleSubgroup(subgroup.id)}
-													className="flex items-center gap-2 w-full text-left text-sm font-medium hover:text-primary transition-colors"
-												>
-													{isExpanded ? (
-														<ChevronDown className="h-4 w-4" />
-													) : (
-														<ChevronRight className="h-4 w-4" />
+											return (
+												<div key={subgroup.id} className="space-y-2">
+													<button
+														type="button"
+														onClick={() => toggleSubgroup(subgroup.id)}
+														className="flex items-center gap-2 w-full text-left text-sm font-medium hover:text-primary transition-colors"
+													>
+														{isExpanded ? (
+															<ChevronDown className="h-4 w-4" />
+														) : (
+															<ChevronRight className="h-4 w-4" />
+														)}
+														<Users className="h-4 w-4" />
+														{subgroup.name}
+														<span className="text-muted-foreground">
+															({subgroupGuests.length})
+														</span>
+													</button>
+													{isExpanded && (
+														<div className="ml-6 space-y-2">
+															{subgroupGuests.map((guest) => (
+																<GuestCard
+																	key={guest.id}
+																	guest={guest}
+																	color={getGuestColor(guest)}
+																	onEdit={() => handleEditGuest(guest)}
+																/>
+															))}
+														</div>
 													)}
-													<Users className="h-4 w-4" />
-													{subgroup.name}
-													<span className="text-muted-foreground">
-														({subgroupGuests.length})
-													</span>
-												</button>
-												{isExpanded && (
-													<div className="ml-6 space-y-2">
-														{subgroupGuests.map((guest) => (
-															<GuestCard
-																key={guest.id}
-																guest={guest}
-																color={getGuestColor(guest)}
-																onEdit={() => handleEditGuest(guest)}
-															/>
-														))}
-													</div>
-												)}
-											</div>
-										)
-									})}
+												</div>
+											)
+										})}
 
-									{/* Individual guests without subgroup */}
-									{unassignedWithoutSubgroup.map((guest) => (
-										<GuestCard
-											key={guest.id}
-											guest={guest}
-											color={getGuestColor(guest)}
-											onEdit={() => handleEditGuest(guest)}
-										/>
-									))}
-								</>
-							)}
+										{/* Unassigned individual guests */}
+										{unassignedWithoutSubgroup.map((guest) => (
+											<GuestCard
+												key={guest.id}
+												guest={guest}
+												color={getGuestColor(guest)}
+												onEdit={() => handleEditGuest(guest)}
+											/>
+										))}
+									</div>
+								)}
+							</div>
+
+							{/* ASSIGNED SECTION */}
+							<div className="space-y-2 pt-2 border-t">
+								<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+									Assigned ({assignedGuestsData.length})
+								</h3>
+								{assignedGuestsData.length === 0 ? (
+									<p className="text-sm text-muted-foreground text-center py-4">
+										No guests assigned yet
+									</p>
+								) : (
+									<div className="space-y-2">
+										{/* Assigned Subgroups */}
+										{assignedSubgroups.map((subgroup) => {
+											const subgroupAssignments = assignedGuestsData.filter((d) =>
+												subgroup.guestIds.includes(d.guest.id),
+											)
+											if (subgroupAssignments.length === 0) return null
+
+											const isExpanded = expandedSubgroups.has(subgroup.id)
+
+											return (
+												<div key={subgroup.id} className="space-y-2">
+													<button
+														type="button"
+														onClick={() => toggleSubgroup(subgroup.id)}
+														className="flex items-center gap-2 w-full text-left text-sm font-medium hover:text-primary transition-colors"
+													>
+														{isExpanded ? (
+															<ChevronDown className="h-4 w-4" />
+														) : (
+															<ChevronRight className="h-4 w-4" />
+														)}
+														<Users className="h-4 w-4" />
+														{subgroup.name}
+														<span className="text-muted-foreground">
+															({subgroupAssignments.length})
+														</span>
+													</button>
+													{isExpanded && (
+														<div className="ml-6 space-y-2">
+															{subgroupAssignments.map(({ guest, assignment }) => (
+																<GuestCard
+																	key={guest.id}
+																	guest={guest}
+																	color={getGuestColor(guest)}
+																	onEdit={() => handleEditGuest(guest)}
+																	assignment={assignment}
+																/>
+															))}
+														</div>
+													)}
+												</div>
+											)
+										})}
+
+										{/* Assigned individual guests */}
+										{assignedWithoutSubgroup.map(({ guest, assignment }) => (
+											<GuestCard
+												key={guest.id}
+												guest={guest}
+												color={getGuestColor(guest)}
+												onEdit={() => handleEditGuest(guest)}
+												assignment={assignment}
+											/>
+										))}
+									</div>
+								)}
+							</div>
 						</div>
 					</ScrollArea>
 				</TabsContent>

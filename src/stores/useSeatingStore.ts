@@ -7,6 +7,7 @@ import type {
 	Settings,
 	DuplicateGuest,
 	SeatingStore,
+	GuestAssignment,
 } from "@/types"
 import { generateId, generateRandomColor } from "@/lib/utils"
 
@@ -519,6 +520,51 @@ export const useSeatingStore = create<SeatingStore>()(
 					state.tables.flatMap((t) => t.seats.filter((s) => s !== null) as string[]),
 				)
 				return state.guests.filter((g) => !assignedGuestIds.has(g.id))
+			},
+
+			getAssignedGuests: () => {
+				const state = get()
+				const assigned: Array<{ guest: Guest; assignment: GuestAssignment }> = []
+
+				for (const table of state.tables) {
+					for (let i = 0; i < table.seats.length; i++) {
+						const guestId = table.seats[i]
+						if (guestId) {
+							const guest = state.guests.find((g) => g.id === guestId)
+							if (guest) {
+								assigned.push({
+									guest,
+									assignment: {
+										guestId,
+										tableId: table.id,
+										tableName: table.name,
+										seatIndex: i,
+									},
+								})
+							}
+						}
+					}
+				}
+
+				return assigned
+			},
+
+			getGuestAssignment: (guestId) => {
+				const state = get()
+
+				for (const table of state.tables) {
+					const seatIndex = table.seats.findIndex((seat) => seat === guestId)
+					if (seatIndex !== -1) {
+						return {
+							guestId,
+							tableId: table.id,
+							tableName: table.name,
+							seatIndex,
+						}
+					}
+				}
+
+				return null
 			},
 
 			getGuestsBySubgroup: (subgroupId) => {

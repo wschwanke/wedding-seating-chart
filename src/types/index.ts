@@ -40,6 +40,13 @@ export interface DuplicateGuest {
 	group: string
 }
 
+export interface GuestAssignment {
+	guestId: string
+	tableId: string
+	tableName: string
+	seatIndex: number
+}
+
 export interface SeatingStore {
 	guests: Guest[]
 	subgroups: Subgroup[]
@@ -76,6 +83,8 @@ export interface SeatingStore {
 	autoAssign: () => void
 	clearAll: () => void
 	getUnassignedGuests: () => Guest[]
+	getAssignedGuests: () => Array<{ guest: Guest; assignment: GuestAssignment }>
+	getGuestAssignment: (guestId: string) => GuestAssignment | null
 	getGuestsBySubgroup: (subgroupId: string) => Guest[]
 	isTableOverCapacity: (tableId: string) => boolean
 }

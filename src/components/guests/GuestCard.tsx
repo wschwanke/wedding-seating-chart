@@ -1,9 +1,9 @@
 import { useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { Card } from "@/components/ui/card"
-import { Users, User, Edit, Trash2 } from "lucide-react"
+import { Users, User, Edit, Trash2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Guest } from "@/types"
+import type { Guest, GuestAssignment } from "@/types"
 import { cn } from "@/lib/utils"
 import { useSeatingStore } from "@/stores/useSeatingStore"
 
@@ -11,9 +11,10 @@ interface GuestCardProps {
 	guest: Guest
 	color?: string
 	onEdit?: () => void
+	assignment?: GuestAssignment
 }
 
-export function GuestCard({ guest, color, onEdit }: GuestCardProps) {
+export function GuestCard({ guest, color, onEdit, assignment }: GuestCardProps) {
 	const deleteGuest = useSeatingStore((state) => state.deleteGuest)
 
 	const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -52,6 +53,7 @@ export function GuestCard({ guest, color, onEdit }: GuestCardProps) {
 			className={cn(
 				"p-3 cursor-grab active:cursor-grabbing border-l-4 transition-shadow hover:shadow-md",
 				isDragging && "opacity-50",
+				assignment && "opacity-70",
 			)}
 		>
 			<div className="flex items-start justify-between gap-2">
@@ -71,6 +73,16 @@ export function GuestCard({ guest, color, onEdit }: GuestCardProps) {
 						<p className="text-xs text-muted-foreground">
 							Party of {guest.partySize}
 						</p>
+					)}
+					{assignment && (
+						<div className="flex items-center gap-1 mt-1">
+							<span 
+								className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+							>
+								<MapPin className="h-3 w-3" />
+								{assignment.tableName}, Seat {assignment.seatIndex + 1}
+							</span>
+						</div>
 					)}
 				</div>
 				<div className="flex gap-1">

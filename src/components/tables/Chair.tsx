@@ -1,4 +1,5 @@
-import { useDroppable } from "@dnd-kit/core"
+import { useDroppable, useDraggable } from "@dnd-kit/core"
+import { CSS } from "@dnd-kit/utilities"
 import { cn } from "@/lib/utils"
 import type { Guest } from "@/types"
 import { User } from "lucide-react"
@@ -18,14 +19,26 @@ export function Chair({
 	color,
 	position,
 }: ChairProps) {
-	const { isOver, setNodeRef } = useDroppable({
+	const { isOver, setNodeRef: setDropRef } = useDroppable({
 		id: `${tableId}-${seatIndex}`,
 		data: { tableId, seatIndex },
 	})
 
+	const { 
+		attributes, 
+		listeners, 
+		setNodeRef: setDragRef, 
+		transform, 
+		isDragging 
+	} = useDraggable({
+		id: guest ? `chair-${guest.id}` : `empty-${tableId}-${seatIndex}`,
+		data: { guest },
+		disabled: !guest,
+	})
+
 	return (
 		<div
-			ref={setNodeRef}
+			ref={setDropRef}
 			className="absolute"
 			style={{
 				left: `${position.x}px`,
@@ -34,20 +47,24 @@ export function Chair({
 			}}
 		>
 			<div
+				ref={guest ? setDragRef : undefined}
+				{...(guest ? { ...attributes, ...listeners } : {})}
 				className={cn(
 					"w-12 h-12 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-all",
 					guest
-						? "bg-background border-primary shadow-md"
+						? "bg-background border-primary shadow-md cursor-grab active:cursor-grabbing"
 						: "bg-muted/50 border-border",
 					isOver && "ring-2 ring-primary ring-offset-2 scale-110",
+					isDragging && "opacity-50",
 				)}
 				style={{
 					backgroundColor: guest && color ? `${color}20` : undefined,
 					borderColor: guest && color ? color : undefined,
+					...(transform && { transform: CSS.Translate.toString(transform) }),
 				}}
 			>
 				{guest ? (
-					<div className="text-center leading-tight overflow-hidden">
+					<div className="text-center leading-tight overflow-hidden pointer-events-none">
 						<div className="text-[10px] font-semibold truncate px-1">
 							{guest.firstName}
 						</div>
