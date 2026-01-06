@@ -71,13 +71,13 @@ export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignm
 			{...listeners}
 			{...attributes}
 			className={cn(
-				"p-3 cursor-grab active:cursor-grabbing border-l-4 transition-shadow hover:shadow-md select-none",
+				"p-2 cursor-grab active:cursor-grabbing border-l-4 transition-shadow hover:shadow-md select-none",
 				isDragging && "opacity-50",
 				assignment && "opacity-70",
 			)}
 		>
 			<div className="flex items-start justify-between gap-2">
-				<GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+				<GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2">
 						{guest.partySize > 1 ? (
@@ -85,7 +85,7 @@ export const GuestCard = memo(function GuestCard({ guest, color, onEdit, assignm
 						) : (
 							<User className="h-4 w-4 flex-shrink-0" />
 						)}
-						<p className="font-medium truncate">
+						<p className="font-medium text-sm truncate">
 							{guest.firstName} {guest.lastName}
 						</p>
 					</div>

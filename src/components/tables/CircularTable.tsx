@@ -60,11 +60,11 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 	// Calculate dynamic table sizing based on chair count - memoize to prevent recalculation
 	const tableDimensions = useMemo(() => {
 		const CHAIR_SIZE = 56 // pixels (w-14)
-		const MIN_GAP = 8 // minimum pixels between chairs
-		const MIN_SPACING = CHAIR_SIZE + MIN_GAP // 64px arc per chair
+		const MIN_GAP = 4 // minimum pixels between chairs
+		const MIN_SPACING = CHAIR_SIZE + MIN_GAP // 60px arc per chair
 		const BASE_RADIUS = 100
-		const BASE_CONTAINER = 300
-		const MAX_CONTAINER = 500 // Maximum container size
+		const BASE_CONTAINER = 260
+		const MAX_CONTAINER = 400 // Maximum container size
 
 		// Calculate minimum radius needed to fit all chairs without overlap
 		const minRadiusForChairs = (table.chairCount * MIN_SPACING) / (2 * Math.PI)
@@ -106,21 +106,21 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 
 	return (
 		<>
-		<Card className="relative min-h-[420px]">
-			<div className="p-4 h-full flex flex-col">
+		<Card className="relative min-h-[280px]">
+			<div className="p-3 h-full flex flex-col">
 				{/* Table header */}
-				<div className="flex items-center justify-between mb-2">
-					<h3 className="font-semibold text-sm">{table.name}</h3>
+				<div className="flex items-center justify-between mb-1">
+					<h3 className="font-semibold text-xs">{table.name}</h3>
 					<Popover>
 						<PopoverTrigger asChild>
 							<Button 
 								variant="ghost" 
 								size="icon" 
-								className="h-6 w-6"
+								className="h-5 w-5"
 								onPointerDown={preventDrag}
 								aria-label="Table settings"
 							>
-								<Settings className="h-4 w-4" />
+								<Settings className="h-3 w-3" />
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent className="w-64">
@@ -180,7 +180,7 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 				{/* Capacity indicator */}
 				<div
 					className={cn(
-						"text-xs mb-3",
+						"text-xs mb-2",
 						isOverCapacity ? "text-destructive font-medium" : "text-muted-foreground",
 					)}
 				>
@@ -208,7 +208,7 @@ export const CircularTable = memo(function CircularTable({ table }: CircularTabl
 								height: `${tableDimensions.tableCenterSize}px`,
 							}}
 						>
-							<span className="text-3xl font-bold text-muted-foreground/30">
+							<span className="text-2xl font-bold text-muted-foreground/30">
 								{table.name.split(" ")[1] || table.name}
 							</span>
 						</div>

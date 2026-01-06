@@ -283,9 +283,9 @@ export function GuestSidebar() {
 	)
 
 	return (
-		<div className="w-[408px] border-r bg-muted/20 flex flex-col h-full">
-			<div className="p-4 border-b space-y-2">
-				<h2 className="text-lg font-semibold">Guests</h2>
+		<div className="w-[340px] border-r bg-muted/20 flex flex-col h-full">
+			<div className="p-3 border-b space-y-2">
+				<h2 className="text-base font-semibold">Guests</h2>
 				<CsvImport />
 				<Button onClick={handleAddGuest} size="sm" className="w-full">
 					<Plus className="h-4 w-4 mr-2" />
@@ -358,7 +358,7 @@ export function GuestSidebar() {
 					)}
 
 					<ScrollArea className="flex-1">
-						<div className="px-4 space-y-4 pb-4">
+						<div className="px-3 space-y-3 pb-3">
 							{/* UNASSIGNED SECTION */}
 							<div className="space-y-2">
 								<h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -529,7 +529,7 @@ export function GuestSidebar() {
 
 				<TabsContent value="groups" className="flex-1 overflow-hidden mt-2">
 					<ScrollArea className="h-full">
-						<div className="px-4 space-y-3 pb-4">
+						<div className="px-3 space-y-2 pb-3">
 							{uniqueRelationships.length === 0 ? (
 								<p className="text-sm text-muted-foreground text-center py-8">
 									No relationships yet
